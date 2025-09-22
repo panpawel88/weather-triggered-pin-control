@@ -1,0 +1,11 @@
+# ESP32 Hello World Default Configuration
+
+# Serial flasher config
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# Compiler options
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# Log output
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
