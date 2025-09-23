@@ -47,6 +47,7 @@ RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
 RTC_DATA_ATTR bool weatherFetched = false;
 RTC_DATA_ATTR float currentCloudCover = 75.0f;  // Default to cloudy (0 LEDs)
 RTC_DATA_ATTR bool ledStates[NUM_LEDS] = {false, false, false, false, false};
+RTC_DATA_ATTR bool lastPinState = false;  // Track previous pin state for edge detection
 
 typedef struct {
     int year;
@@ -333,8 +334,15 @@ void controlGPIO(datetime_t *now) {
     int hour = now->hour;
     bool activate = (hour >= 9 && hour < pinOffHour);
 
-    ESP_LOGI(TAG, "GPIO control: hour=%d, pin_off_hour=%d, activate=%s",
-             hour, pinOffHour, activate ? "yes" : "no");
+    // Detect pin turning off (transition from ON to OFF)
+    if (lastPinState && !activate) {
+        weatherFetched = false;  // Reset when pin turns off
+        ESP_LOGI(TAG, "Main pin turning off, resetting weatherFetched flag");
+    }
+    lastPinState = activate;
+
+    ESP_LOGI(TAG, "GPIO control: hour=%d, pin_off_hour=%d, activate=%s, weather_fetched=%s",
+             hour, pinOffHour, activate ? "yes" : "no", weatherFetched ? "yes" : "no");
 
     // Control main GPIO pin
     rtc_gpio_init(GPIO_CONTROL_PIN);
@@ -342,8 +350,9 @@ void controlGPIO(datetime_t *now) {
     rtc_gpio_set_level(GPIO_CONTROL_PIN, activate ? 1 : 0);
     rtc_gpio_hold_en(GPIO_CONTROL_PIN);  // Maintain state during sleep
 
-    // Control LEDs based on main pin state and cloud cover
-    controlLEDs(activate, currentCloudCover);
+    // Control LEDs - only show if weather has been fetched AND main pin is active
+    bool showLEDs = weatherFetched && activate;
+    controlLEDs(showLEDs, currentCloudCover);
 }
 
 void app_main(void) {
@@ -386,11 +395,6 @@ void app_main(void) {
 
     // Control GPIO based on weather and time
     controlGPIO(&now);
-
-    // Reset fetch flag at midnight
-    if (now.hour == 0) {
-        weatherFetched = false;
-    }
 
     ESP_LOGI(TAG, "Going to deep sleep for 1 hour");
 
