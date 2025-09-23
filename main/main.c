@@ -35,7 +35,7 @@ static const char *TAG = "WEATHER_CONTROL";
 #define DS3231_ADDR 0x68
 
 // RTC memory variables persist during deep sleep
-RTC_DATA_ATTR bool tomorrowSunny = false;
+RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
 RTC_DATA_ATTR bool weatherFetched = false;
 
 typedef struct {
@@ -47,9 +47,44 @@ typedef struct {
     int second;
 } datetime_t;
 
+typedef struct {
+    float min_cloudcover;    // Minimum cloudcover percentage (inclusive)
+    float max_cloudcover;    // Maximum cloudcover percentage (exclusive)
+    int pin_high_until_hour; // Hour when pin goes low (24h format)
+} cloudcover_range_t;
+
+// Configuration: Cloudcover ranges (lower cloudcover = longer operation)
+#define NUM_CLOUDCOVER_RANGES 6
+static const cloudcover_range_t CLOUDCOVER_RANGES[NUM_CLOUDCOVER_RANGES] = {
+    {0.0f,  10.0f, 22},  // Very clear (0-9%) -> 10 PM
+    {10.0f, 20.0f, 21},  // Clear (10-19%) -> 9 PM
+    {20.0f, 30.0f, 20},  // Mostly clear (20-29%) -> 8 PM
+    {30.0f, 40.0f, 19},  // Partly cloudy (30-39%) -> 7 PM
+    {40.0f, 50.0f, 18},  // Cloudy (40-49%) -> 6 PM
+    {50.0f, 100.0f, 17}  // Very cloudy (50%+) -> 5 PM
+};
+
 // Convert BCD to decimal
 static uint8_t bcd_to_dec(uint8_t bcd) {
     return ((bcd >> 4) * 10) + (bcd & 0x0F);
+}
+
+// Find appropriate pin-off hour based on cloudcover percentage
+static int getPinOffHourFromCloudcover(float cloudcover) {
+    for (int i = 0; i < NUM_CLOUDCOVER_RANGES; i++) {
+        if (cloudcover >= CLOUDCOVER_RANGES[i].min_cloudcover &&
+            cloudcover < CLOUDCOVER_RANGES[i].max_cloudcover) {
+            ESP_LOGI(TAG, "Cloudcover %.1f%% matches range [%.1f, %.1f) -> pin off at %d:00",
+                     cloudcover,
+                     CLOUDCOVER_RANGES[i].min_cloudcover,
+                     CLOUDCOVER_RANGES[i].max_cloudcover,
+                     CLOUDCOVER_RANGES[i].pin_high_until_hour);
+            return CLOUDCOVER_RANGES[i].pin_high_until_hour;
+        }
+    }
+    // Default fallback (shouldn't happen with proper ranges)
+    ESP_LOGW(TAG, "No range found for cloudcover %.1f%%, using default 5 PM", cloudcover);
+    return 17;
 }
 
 
@@ -230,9 +265,9 @@ void fetchWeatherForecast(void) {
                     cJSON *tomorrow = cJSON_GetArrayItem(cloudcover, 1);
                     if (tomorrow && cJSON_IsNumber(tomorrow)) {
                         float cloud_cover = (float)cJSON_GetNumberValue(tomorrow);
-                        tomorrowSunny = cloud_cover < 50.0f;
-                        ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%%, sunny: %s",
-                                cloud_cover, tomorrowSunny ? "yes" : "no");
+                        pinOffHour = getPinOffHourFromCloudcover(cloud_cover);
+                        ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%% -> pin will turn off at %d:00",
+                                cloud_cover, pinOffHour);
                     }
                 }
             }
@@ -249,16 +284,10 @@ void fetchWeatherForecast(void) {
 
 void controlGPIO(datetime_t *now) {
     int hour = now->hour;
-    bool activate = false;
+    bool activate = (hour >= 9 && hour < pinOffHour);
 
-    if (tomorrowSunny) {
-        activate = (hour >= 9 && hour < 20);  // 9 AM - 8 PM
-    } else {
-        activate = (hour >= 9 && hour < 17);  // 9 AM - 5 PM
-    }
-
-    ESP_LOGI(TAG, "GPIO control: hour=%d, sunny=%s, activate=%s",
-             hour, tomorrowSunny ? "yes" : "no", activate ? "yes" : "no");
+    ESP_LOGI(TAG, "GPIO control: hour=%d, pin_off_hour=%d, activate=%s",
+             hour, pinOffHour, activate ? "yes" : "no");
 
     rtc_gpio_init(GPIO_CONTROL_PIN);
     rtc_gpio_set_direction(GPIO_CONTROL_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
@@ -268,6 +297,16 @@ void controlGPIO(datetime_t *now) {
 
 void app_main(void) {
     ESP_LOGI(TAG, "Weather Triggered Pin Control starting");
+
+    // Log cloudcover configuration ranges
+    ESP_LOGI(TAG, "Cloudcover ranges configuration:");
+    for (int i = 0; i < NUM_CLOUDCOVER_RANGES; i++) {
+        ESP_LOGI(TAG, "  Range %d: [%.1f%%, %.1f%%) -> pin off at %d:00",
+                 i + 1,
+                 CLOUDCOVER_RANGES[i].min_cloudcover,
+                 CLOUDCOVER_RANGES[i].max_cloudcover,
+                 CLOUDCOVER_RANGES[i].pin_high_until_hour);
+    }
 
     // Initialize I2C for RTC
     if (i2c_master_init() != ESP_OK) {
@@ -283,6 +322,8 @@ void app_main(void) {
 
     ESP_LOGI(TAG, "Current time: %04d-%02d-%02d %02d:%02d:%02d",
              now.year, now.month, now.day, now.hour, now.minute, now.second);
+    ESP_LOGI(TAG, "Current pin-off hour setting: %d:00 (weather fetched: %s)",
+             pinOffHour, weatherFetched ? "yes" : "no");
 
     // Fetch weather at 4 PM
     if (now.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
