@@ -27,6 +27,14 @@ static const char *TAG = "WEATHER_CONTROL";
 #define GPIO_CONTROL_PIN GPIO_NUM_2
 #define WEATHER_CHECK_HOUR 16  // 4 PM
 
+// LED pins (5 LEDs for cloud cover visualization)
+#define LED_PIN_1 GPIO_NUM_4
+#define LED_PIN_2 GPIO_NUM_5
+#define LED_PIN_3 GPIO_NUM_16
+#define LED_PIN_4 GPIO_NUM_17
+#define LED_PIN_5 GPIO_NUM_18
+#define NUM_LEDS 5
+
 // I2C configuration for DS3231 RTC
 #define I2C_MASTER_SCL_IO 22
 #define I2C_MASTER_SDA_IO 21
@@ -37,6 +45,8 @@ static const char *TAG = "WEATHER_CONTROL";
 // RTC memory variables persist during deep sleep
 RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
 RTC_DATA_ATTR bool weatherFetched = false;
+RTC_DATA_ATTR float currentCloudCover = 75.0f;  // Default to cloudy (0 LEDs)
+RTC_DATA_ATTR bool ledStates[NUM_LEDS] = {false, false, false, false, false};
 
 typedef struct {
     int year;
@@ -85,6 +95,42 @@ static int getPinOffHourFromCloudcover(float cloudcover) {
     // Default fallback (shouldn't happen with proper ranges)
     ESP_LOGW(TAG, "No range found for cloudcover %.1f%%, using default 5 PM", cloudcover);
     return 17;
+}
+
+// Calculate number of LEDs to turn on based on cloud cover percentage
+static int getLEDCountFromCloudcover(float cloudcover) {
+    if (cloudcover >= 50.0f) return 0;      // Very cloudy (50-100%) -> 0 LEDs
+    else if (cloudcover >= 40.0f) return 1; // Cloudy (40-49%) -> 1 LED
+    else if (cloudcover >= 30.0f) return 2; // Partly cloudy (30-39%) -> 2 LEDs
+    else if (cloudcover >= 20.0f) return 3; // Mostly clear (20-29%) -> 3 LEDs
+    else if (cloudcover >= 10.0f) return 4; // Clear (10-19%) -> 4 LEDs
+    else return 5;                           // Very clear (0-9%) -> 5 LEDs
+}
+
+// Control LEDs based on cloud cover and main pin state
+static void controlLEDs(bool mainPinActive, float cloudcover) {
+    static const gpio_num_t led_pins[NUM_LEDS] = {
+        LED_PIN_1, LED_PIN_2, LED_PIN_3, LED_PIN_4, LED_PIN_5
+    };
+
+    int activeLEDs = 0;
+    if (mainPinActive) {
+        activeLEDs = getLEDCountFromCloudcover(cloudcover);
+    }
+
+    ESP_LOGI(TAG, "LED control: main_pin=%s, cloudcover=%.1f%%, active_leds=%d",
+             mainPinActive ? "ON" : "OFF", cloudcover, activeLEDs);
+
+    // Set LED states and configure GPIO pins
+    for (int i = 0; i < NUM_LEDS; i++) {
+        bool ledOn = (i < activeLEDs);
+        ledStates[i] = ledOn;
+
+        rtc_gpio_init(led_pins[i]);
+        rtc_gpio_set_direction(led_pins[i], RTC_GPIO_MODE_OUTPUT_ONLY);
+        rtc_gpio_set_level(led_pins[i], ledOn ? 1 : 0);
+        rtc_gpio_hold_en(led_pins[i]);  // Maintain state during sleep
+    }
 }
 
 
@@ -265,9 +311,10 @@ void fetchWeatherForecast(void) {
                     cJSON *tomorrow = cJSON_GetArrayItem(cloudcover, 1);
                     if (tomorrow && cJSON_IsNumber(tomorrow)) {
                         float cloud_cover = (float)cJSON_GetNumberValue(tomorrow);
+                        currentCloudCover = cloud_cover;  // Store for LED control
                         pinOffHour = getPinOffHourFromCloudcover(cloud_cover);
-                        ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%% -> pin will turn off at %d:00",
-                                cloud_cover, pinOffHour);
+                        ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%% -> pin will turn off at %d:00, LEDs: %d",
+                                cloud_cover, pinOffHour, getLEDCountFromCloudcover(cloud_cover));
                     }
                 }
             }
@@ -289,10 +336,14 @@ void controlGPIO(datetime_t *now) {
     ESP_LOGI(TAG, "GPIO control: hour=%d, pin_off_hour=%d, activate=%s",
              hour, pinOffHour, activate ? "yes" : "no");
 
+    // Control main GPIO pin
     rtc_gpio_init(GPIO_CONTROL_PIN);
     rtc_gpio_set_direction(GPIO_CONTROL_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
     rtc_gpio_set_level(GPIO_CONTROL_PIN, activate ? 1 : 0);
     rtc_gpio_hold_en(GPIO_CONTROL_PIN);  // Maintain state during sleep
+
+    // Control LEDs based on main pin state and cloud cover
+    controlLEDs(activate, currentCloudCover);
 }
 
 void app_main(void) {
@@ -324,6 +375,8 @@ void app_main(void) {
              now.year, now.month, now.day, now.hour, now.minute, now.second);
     ESP_LOGI(TAG, "Current pin-off hour setting: %d:00 (weather fetched: %s)",
              pinOffHour, weatherFetched ? "yes" : "no");
+    ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
+             currentCloudCover, getLEDCountFromCloudcover(currentCloudCover));
 
     // Fetch weather at 4 PM
     if (now.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
