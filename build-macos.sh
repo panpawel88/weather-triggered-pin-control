@@ -11,7 +11,7 @@ echo "Setting up ESP-IDF environment..."
 
 echo "Configuring project for ESP32..."
 # Configure project
-idf.py set-target esp32
+idf.py set-target esp32-s3
 
 echo "Opening menuconfig (optional - press Ctrl+C to skip)..."
 # Optional: Open menuconfig for configuration

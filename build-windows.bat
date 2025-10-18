@@ -8,7 +8,7 @@ call %userprofile%\esp\esp-idf\export.bat
 
 echo Configuring project for ESP32...
 REM Configure project
-idf.py set-target esp32
+idf.py set-target esp32-s3
 
 echo Opening menuconfig (optional - press Ctrl+C to skip)...
 REM Optional: Open menuconfig for configuration
