@@ -142,7 +142,7 @@ static void controlLEDs(bool mainPinActive, float cloudcover) {
 
         rtc_gpio_init(led_pins[i]);
         rtc_gpio_set_direction(led_pins[i], RTC_GPIO_MODE_OUTPUT_ONLY);
-        rtc_gpio_set_level(led_pins[i], ledOn ? 1 : 0);
+        rtc_gpio_set_level(led_pins[i], ledOn ? 0 : 1);  // Active-low: 0=ON, 1=OFF
         rtc_gpio_hold_en(led_pins[i]);  // Maintain state during sleep
     }
 }
