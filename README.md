@@ -20,11 +20,16 @@ An ESP32-based IoT device that automatically controls a GPIO pin based on weathe
 - Connecting wires
 - Optional: External components to control (relay, LED, etc.)
 
-## Pin Configuration
+## Default Pin Configuration
+
+Default pins (configurable via `idf.py menuconfig`):
 
 - **GPIO 2**: Control pin output
+- **GPIO 4, 5, 16, 17, 18**: LED pins (cloud cover visualization)
 - **GPIO 21**: I2C SDA (DS3231)
 - **GPIO 22**: I2C SCL (DS3231)
+
+**Note:** All pins can be customized via menuconfig under "Weather Control Configuration > Hardware Pin Configuration"
 
 ## Software Prerequisites
 
@@ -34,15 +39,42 @@ An ESP32-based IoT device that automatically controls a GPIO pin based on weathe
 
 ## Configuration
 
-Before building, update the configuration in `main/main.c`:
+This project uses a hybrid configuration system combining ESP-IDF's menuconfig and a local config file.
 
-```c
-#define WIFI_SSID "YOUR_NETWORK"        // Your WiFi network name
-#define WIFI_PASSWORD "YOUR_PASSWORD"    // Your WiFi password
-#define LATITUDE 52.23f                  // Your location latitude
-#define LONGITUDE 21.01f                 // Your location longitude
-#define WEATHER_CHECK_HOUR 16            // Hour to check weather (24h format)
+### Step 1: Create Local Configuration File
+
+Copy the example config file and edit it with your WiFi credentials:
+
+```bash
+# Create config.h from template
+cp main/config.h.example main/config.h
+
+# Edit config.h with your WiFi credentials and optional location
+# (Use your preferred text editor)
 ```
+
+**In `main/config.h`, configure:**
+- `WIFI_SSID` - Your WiFi network name
+- `WIFI_PASSWORD` - Your WiFi password
+- `LATITUDE` / `LONGITUDE` - (Optional) Override default location
+
+**Note:** `config.h` is gitignored and will not be committed to the repository.
+
+### Step 2: Configure Hardware and Settings (Optional)
+
+Run menuconfig to configure hardware pins and weather settings:
+
+```bash
+idf.py menuconfig
+```
+
+Navigate to: **Weather Control Configuration**
+
+**Available options:**
+- **Hardware Pin Configuration** - GPIO pins for control, LEDs, and I2C
+- **Location Settings** - Default latitude/longitude
+- **Weather Check Schedule** - Hour to check weather forecast
+- **Cloud Cover Ranges Configuration** - Customize cloud cover thresholds and operating hours
 
 ## Building and Flashing
 

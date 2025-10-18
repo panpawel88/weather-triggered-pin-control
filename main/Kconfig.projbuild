@@ -1,0 +1,206 @@
+menu "Weather Control Configuration"
+
+    menu "Hardware Pin Configuration"
+
+        config WEATHER_CONTROL_GPIO_PIN
+            int "Control GPIO Pin"
+            default 2
+            range 0 39
+            help
+                GPIO pin number for the main control output.
+                This pin will be activated based on weather conditions and time schedule.
+
+        config WEATHER_CONTROL_LED_PIN_1
+            int "LED Pin 1"
+            default 4
+            range 0 39
+            help
+                GPIO pin number for LED 1 (cloud cover visualization).
+
+        config WEATHER_CONTROL_LED_PIN_2
+            int "LED Pin 2"
+            default 5
+            range 0 39
+            help
+                GPIO pin number for LED 2 (cloud cover visualization).
+
+        config WEATHER_CONTROL_LED_PIN_3
+            int "LED Pin 3"
+            default 16
+            range 0 39
+            help
+                GPIO pin number for LED 3 (cloud cover visualization).
+
+        config WEATHER_CONTROL_LED_PIN_4
+            int "LED Pin 4"
+            default 17
+            range 0 39
+            help
+                GPIO pin number for LED 4 (cloud cover visualization).
+
+        config WEATHER_CONTROL_LED_PIN_5
+            int "LED Pin 5"
+            default 18
+            range 0 39
+            help
+                GPIO pin number for LED 5 (cloud cover visualization).
+
+        config WEATHER_CONTROL_I2C_SDA
+            int "I2C SDA Pin"
+            default 21
+            range 0 39
+            help
+                GPIO pin number for I2C SDA (DS3231 RTC module).
+
+        config WEATHER_CONTROL_I2C_SCL
+            int "I2C SCL Pin"
+            default 22
+            range 0 39
+            help
+                GPIO pin number for I2C SCL (DS3231 RTC module).
+
+    endmenu
+
+    menu "Location Settings"
+
+        config WEATHER_DEFAULT_LATITUDE
+            string "Default Latitude"
+            default "52.23"
+            help
+                Default latitude for weather forecast location.
+                Can be overridden in config.h if needed.
+                Example: 52.23 for Warsaw, Poland
+
+        config WEATHER_DEFAULT_LONGITUDE
+            string "Default Longitude"
+            default "21.01"
+            help
+                Default longitude for weather forecast location.
+                Can be overridden in config.h if needed.
+                Example: 21.01 for Warsaw, Poland
+
+    endmenu
+
+    menu "Weather Check Schedule"
+
+        config WEATHER_CHECK_HOUR
+            int "Weather Check Hour (24h format)"
+            default 16
+            range 0 23
+            help
+                Hour of the day (24h format) when the device checks weather forecast.
+                Default is 16 (4 PM).
+
+    endmenu
+
+    menu "Cloud Cover Ranges Configuration"
+
+        config WEATHER_RANGE_1_MIN
+            int "Range 1: Minimum cloud cover (%)"
+            default 0
+            range 0 100
+            help
+                Very clear sky - minimum cloud cover percentage (inclusive).
+
+        config WEATHER_RANGE_1_MAX
+            int "Range 1: Maximum cloud cover (%)"
+            default 10
+            range 0 100
+            help
+                Very clear sky - maximum cloud cover percentage (exclusive).
+
+        config WEATHER_RANGE_1_HOUR
+            int "Range 1: Pin off hour"
+            default 22
+            range 0 23
+            help
+                Very clear sky - hour when pin turns off (24h format).
+
+        config WEATHER_RANGE_2_MIN
+            int "Range 2: Minimum cloud cover (%)"
+            default 10
+            range 0 100
+
+        config WEATHER_RANGE_2_MAX
+            int "Range 2: Maximum cloud cover (%)"
+            default 20
+            range 0 100
+
+        config WEATHER_RANGE_2_HOUR
+            int "Range 2: Pin off hour"
+            default 21
+            range 0 23
+            help
+                Clear sky - hour when pin turns off (24h format).
+
+        config WEATHER_RANGE_3_MIN
+            int "Range 3: Minimum cloud cover (%)"
+            default 20
+            range 0 100
+
+        config WEATHER_RANGE_3_MAX
+            int "Range 3: Maximum cloud cover (%)"
+            default 30
+            range 0 100
+
+        config WEATHER_RANGE_3_HOUR
+            int "Range 3: Pin off hour"
+            default 20
+            range 0 23
+            help
+                Mostly clear sky - hour when pin turns off (24h format).
+
+        config WEATHER_RANGE_4_MIN
+            int "Range 4: Minimum cloud cover (%)"
+            default 30
+            range 0 100
+
+        config WEATHER_RANGE_4_MAX
+            int "Range 4: Maximum cloud cover (%)"
+            default 40
+            range 0 100
+
+        config WEATHER_RANGE_4_HOUR
+            int "Range 4: Pin off hour"
+            default 19
+            range 0 23
+            help
+                Partly cloudy - hour when pin turns off (24h format).
+
+        config WEATHER_RANGE_5_MIN
+            int "Range 5: Minimum cloud cover (%)"
+            default 40
+            range 0 100
+
+        config WEATHER_RANGE_5_MAX
+            int "Range 5: Maximum cloud cover (%)"
+            default 50
+            range 0 100
+
+        config WEATHER_RANGE_5_HOUR
+            int "Range 5: Pin off hour"
+            default 18
+            range 0 23
+            help
+                Cloudy - hour when pin turns off (24h format).
+
+        config WEATHER_RANGE_6_MIN
+            int "Range 6: Minimum cloud cover (%)"
+            default 50
+            range 0 100
+
+        config WEATHER_RANGE_6_MAX
+            int "Range 6: Maximum cloud cover (%)"
+            default 100
+            range 0 100
+
+        config WEATHER_RANGE_6_HOUR
+            int "Range 6: Pin off hour"
+            default 17
+            range 0 23
+            help
+                Very cloudy - hour when pin turns off (24h format).
+
+    endmenu
+
+endmenu

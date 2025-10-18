@@ -8,6 +8,35 @@ Before building this ESP32 project, ensure you have ESP-IDF installed:
 - **ESP32 Development Board**: Compatible ESP32 development board
 - **USB Cable**: For flashing and monitoring
 
+## Configuration
+
+This project uses a **hybrid configuration system**:
+- **config.h** (gitignored) - WiFi credentials and location overrides
+- **menuconfig** - Hardware pins, weather settings, cloud cover ranges
+
+### Step 1: Create Configuration File (Required)
+
+```bash
+# Copy the example config file
+cp main/config.h.example main/config.h
+
+# Edit config.h with your WiFi credentials
+# IMPORTANT: config.h is gitignored and will not be committed
+```
+
+### Step 2: Customize Hardware Settings (Optional)
+
+```bash
+# Run menuconfig to configure pins and weather settings
+idf.py menuconfig
+
+# Navigate to: Weather Control Configuration
+# - Hardware Pin Configuration (GPIO pins)
+# - Location Settings (default lat/long)
+# - Weather Check Schedule
+# - Cloud Cover Ranges Configuration
+```
+
 ## Build Instructions
 
 ### macOS/Linux
@@ -22,9 +51,8 @@ Before building this ESP32 project, ensure you have ESP-IDF installed:
    # Set up environment (run every new terminal session)
    . $HOME/esp/esp-idf/export.sh
 
-   # Configure project
+   # Set target
    idf.py set-target esp32
-   idf.py menuconfig  # Optional: configure project settings
 
    # Build
    idf.py build
@@ -42,9 +70,8 @@ Before building this ESP32 project, ensure you have ESP-IDF installed:
    # Set up environment (run every new terminal session)
    %userprofile%\esp\esp-idf\export.bat
 
-   # Configure project
+   # Set target
    idf.py set-target esp32
-   idf.py menuconfig  # Optional: configure project settings
 
    # Build
    idf.py build
@@ -71,9 +98,11 @@ After a successful build:
 
 ## Project Configuration
 
-- Run `idf.py menuconfig` to configure project-specific settings
-- The target is set to ESP32 by default
+- WiFi credentials are configured in `main/config.h` (must be created from config.h.example)
+- Hardware pins and weather settings are configured via `idf.py menuconfig`
+- The target is set to ESP32 by default (ESP32-S3 also supported)
 - Build artifacts are generated in the `build/` directory
+- Configuration values are stored in `sdkconfig` (auto-generated)
 
 ## Troubleshooting
 

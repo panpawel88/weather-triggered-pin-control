@@ -15,32 +15,45 @@
 #include "nvs_flash.h"
 #include "cJSON.h"
 
+// Include local configuration (WiFi credentials, optional location overrides)
+// This file is gitignored and must be created by copying config.h.example
+#ifndef __has_include
+    #error "Compiler does not support __has_include"
+#endif
+
+#if !__has_include("config.h")
+    #error "config.h not found! Please copy main/config.h.example to main/config.h and configure it."
+#endif
+#include "config.h"
+
 static const char *TAG = "WEATHER_CONTROL";
 
-// Configuration
-#define WIFI_SSID "YOUR_NETWORK"
-#define WIFI_PASSWORD "YOUR_PASSWORD"
-#define LATITUDE 52.23f  // Warsaw, Poland
-#define LONGITUDE 21.01f
+// Location configuration: Use config.h overrides if defined, otherwise use menuconfig defaults
+#ifndef LATITUDE
+    #define LATITUDE atof(CONFIG_WEATHER_DEFAULT_LATITUDE)
+#endif
+#ifndef LONGITUDE
+    #define LONGITUDE atof(CONFIG_WEATHER_DEFAULT_LONGITUDE)
+#endif
 
-// Hardware
-#define GPIO_CONTROL_PIN GPIO_NUM_2
-#define WEATHER_CHECK_HOUR 16  // 4 PM
-
-// LED pins (5 LEDs for cloud cover visualization)
-#define LED_PIN_1 GPIO_NUM_4
-#define LED_PIN_2 GPIO_NUM_5
-#define LED_PIN_3 GPIO_NUM_16
-#define LED_PIN_4 GPIO_NUM_17
-#define LED_PIN_5 GPIO_NUM_18
+// Hardware pins from menuconfig
+#define GPIO_CONTROL_PIN CONFIG_WEATHER_CONTROL_GPIO_PIN
+#define LED_PIN_1 CONFIG_WEATHER_CONTROL_LED_PIN_1
+#define LED_PIN_2 CONFIG_WEATHER_CONTROL_LED_PIN_2
+#define LED_PIN_3 CONFIG_WEATHER_CONTROL_LED_PIN_3
+#define LED_PIN_4 CONFIG_WEATHER_CONTROL_LED_PIN_4
+#define LED_PIN_5 CONFIG_WEATHER_CONTROL_LED_PIN_5
 #define NUM_LEDS 5
 
 // I2C configuration for DS3231 RTC
-#define I2C_MASTER_SCL_IO 22
-#define I2C_MASTER_SDA_IO 21
+#define I2C_MASTER_SCL_IO CONFIG_WEATHER_CONTROL_I2C_SCL
+#define I2C_MASTER_SDA_IO CONFIG_WEATHER_CONTROL_I2C_SDA
 #define I2C_MASTER_NUM I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ 100000
 #define DS3231_ADDR 0x68
+
+// Weather check schedule from menuconfig
+#define WEATHER_CHECK_HOUR CONFIG_WEATHER_CHECK_HOUR
 
 // RTC memory variables persist during deep sleep
 RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
@@ -64,15 +77,15 @@ typedef struct {
     int pin_high_until_hour; // Hour when pin goes low (24h format)
 } cloudcover_range_t;
 
-// Configuration: Cloudcover ranges (lower cloudcover = longer operation)
+// Configuration: Cloudcover ranges (from menuconfig)
 #define NUM_CLOUDCOVER_RANGES 6
 static const cloudcover_range_t CLOUDCOVER_RANGES[NUM_CLOUDCOVER_RANGES] = {
-    {0.0f,  10.0f, 22},  // Very clear (0-9%) -> 10 PM
-    {10.0f, 20.0f, 21},  // Clear (10-19%) -> 9 PM
-    {20.0f, 30.0f, 20},  // Mostly clear (20-29%) -> 8 PM
-    {30.0f, 40.0f, 19},  // Partly cloudy (30-39%) -> 7 PM
-    {40.0f, 50.0f, 18},  // Cloudy (40-49%) -> 6 PM
-    {50.0f, 100.0f, 17}  // Very cloudy (50%+) -> 5 PM
+    {CONFIG_WEATHER_RANGE_1_MIN, CONFIG_WEATHER_RANGE_1_MAX, CONFIG_WEATHER_RANGE_1_HOUR},
+    {CONFIG_WEATHER_RANGE_2_MIN, CONFIG_WEATHER_RANGE_2_MAX, CONFIG_WEATHER_RANGE_2_HOUR},
+    {CONFIG_WEATHER_RANGE_3_MIN, CONFIG_WEATHER_RANGE_3_MAX, CONFIG_WEATHER_RANGE_3_HOUR},
+    {CONFIG_WEATHER_RANGE_4_MIN, CONFIG_WEATHER_RANGE_4_MAX, CONFIG_WEATHER_RANGE_4_HOUR},
+    {CONFIG_WEATHER_RANGE_5_MIN, CONFIG_WEATHER_RANGE_5_MAX, CONFIG_WEATHER_RANGE_5_HOUR},
+    {CONFIG_WEATHER_RANGE_6_MIN, CONFIG_WEATHER_RANGE_6_MAX, CONFIG_WEATHER_RANGE_6_HOUR}
 };
 
 // Convert BCD to decimal

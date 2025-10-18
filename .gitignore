@@ -64,3 +64,6 @@ docs/_build/
 
 # Managed components
 managed_components/
+
+# Local configuration (contains sensitive data)
+main/config.h
