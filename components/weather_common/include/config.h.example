@@ -3,14 +3,13 @@
  *
  * SETUP INSTRUCTIONS:
  * 1. Copy this file to config.h in the same directory:
- *    cp main/config.h.example main/config.h
+ *    cp components/weather_common/include/config.h.example components/weather_common/include/config.h
  *
- * 2. Edit main/config.h with your actual WiFi credentials and location
+ * 2. Edit components/weather_common/include/config.h with your WiFi credentials
  *
  * 3. The config.h file is gitignored and will not be committed to the repository
  *
- * NOTE: Hardware pins and other settings are configured via menuconfig:
- *       idf.py menuconfig
+ * NOTE: Hardware pins and behavior are configured in hardware_config.h (same directory)
  */
 
 #ifndef CONFIG_H
@@ -37,7 +36,10 @@
 // ============================================================================
 
 /**
- * Uncomment and set these to override the default location configured in menuconfig
+ * Uncomment and set these to override the default location from hardware_config.h
+ *
+ * Default location is defined in hardware_config.h:
+ *   HW_DEFAULT_LATITUDE and HW_DEFAULT_LONGITUDE
  *
  * To find your coordinates:
  * - Visit https://www.openstreetmap.org/

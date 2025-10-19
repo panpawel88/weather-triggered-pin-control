@@ -10,32 +10,34 @@ Before building this ESP32 project, ensure you have ESP-IDF installed:
 
 ## Configuration
 
-This project uses a **hybrid configuration system**:
-- **config.h** (gitignored) - WiFi credentials and location overrides
-- **menuconfig** - Hardware pins, weather settings, cloud cover ranges
+This project uses a **simple, single-file configuration system**:
 
-### Step 1: Create Configuration File (Required)
+### Single Source of Truth: `hardware_config.h`
+
+**All hardware and behavior configuration** is in one file:
+- `components/weather_common/include/hardware_config.h`
+
+This file contains:
+- ✅ GPIO pin assignments (control pin, LEDs, I2C)
+- ✅ Cloud cover ranges and pin-off hours
+- ✅ Weather check schedule
+- ✅ Default location (lat/long)
+
+**To change your configuration:** Simply edit `hardware_config.h` and rebuild.
+
+### WiFi Credentials: `config.h` (gitignored)
+
+WiFi credentials are kept separate for security:
 
 ```bash
 # Copy the example config file
-cp main/config.h.example main/config.h
+cp components/weather_common/include/config.h.example components/weather_common/include/config.h
 
-# Edit config.h with your WiFi credentials
+# Edit config.h with your WiFi credentials and optional location override
 # IMPORTANT: config.h is gitignored and will not be committed
 ```
 
-### Step 2: Customize Hardware Settings (Optional)
-
-```bash
-# Run menuconfig to configure pins and weather settings
-idf.py menuconfig
-
-# Navigate to: Weather Control Configuration
-# - Hardware Pin Configuration (GPIO pins)
-# - Location Settings (default lat/long)
-# - Weather Check Schedule
-# - Cloud Cover Ranges Configuration
-```
+**No menuconfig needed!** Everything is configured through simple header files.
 
 ## Build Instructions
 

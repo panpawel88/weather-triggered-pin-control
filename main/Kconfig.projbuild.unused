@@ -1,6 +1,7 @@
 menu "Weather Control Configuration"
 
     menu "Hardware Pin Configuration"
+        comment "Default values from components/weather_common/include/hardware_config.h"
 
         config WEATHER_CONTROL_GPIO_PIN
             int "Control GPIO Pin"
@@ -9,6 +10,7 @@ menu "Weather Control Configuration"
             help
                 GPIO pin number for the main control output.
                 This pin will be activated based on weather conditions and time schedule.
+                Default: HW_GPIO_CONTROL_PIN from hardware_config.h
 
         config WEATHER_CONTROL_LED_PIN_1
             int "LED Pin 1"

@@ -4,7 +4,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "rtc_helper.h"
-#include "sdkconfig.h"
+#include "hardware_config.h"
 
 static const char *TAG = "CLOCK_SET";
 
@@ -44,9 +44,9 @@ void app_main(void) {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "");
 
-    // I2C pins from menuconfig
-    int sda_pin = CONFIG_WEATHER_CONTROL_I2C_SDA;
-    int scl_pin = CONFIG_WEATHER_CONTROL_I2C_SCL;
+    // I2C pins from hardware_config.h (same as main application)
+    int sda_pin = HW_I2C_SDA_PIN;
+    int scl_pin = HW_I2C_SCL_PIN;
 
     ESP_LOGI(TAG, "I2C Configuration:");
     ESP_LOGI(TAG, "  SDA Pin: %d", sda_pin);

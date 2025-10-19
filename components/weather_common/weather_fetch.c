@@ -8,11 +8,17 @@
 #include "cJSON.h"
 #include <string.h>
 
-// Include config.h for WiFi credentials
+// Include config.h for WiFi credentials (if available)
 #if __has_include("config.h")
     #include "config.h"
-#else
-    #error "config.h not found! Please copy main/config.h.example to main/config.h"
+#endif
+
+// Provide default WiFi credentials if not defined in config.h
+#ifndef WIFI_SSID
+    #define WIFI_SSID "YOUR_WIFI_SSID"
+#endif
+#ifndef WIFI_PASSWORD
+    #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
 #endif
 
 static const char *TAG = "WEATHER_FETCH";

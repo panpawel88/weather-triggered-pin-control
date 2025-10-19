@@ -2,7 +2,7 @@
 #include "esp_log.h"
 #include "weather_fetch.h"
 #include "led_control.h"
-#include "sdkconfig.h"
+#include "hardware_config.h"
 
 // Include config.h for location overrides
 #if __has_include("config.h")
@@ -11,12 +11,12 @@
 
 static const char *TAG = "WEATHER_TEST";
 
-// Location configuration: Use config.h overrides if defined, otherwise use menuconfig defaults
+// Location configuration: Use config.h overrides if defined, otherwise use hardware defaults
 #ifndef LATITUDE
-    #define LATITUDE atof(CONFIG_WEATHER_DEFAULT_LATITUDE)
+    #define LATITUDE HW_DEFAULT_LATITUDE
 #endif
 #ifndef LONGITUDE
-    #define LONGITUDE atof(CONFIG_WEATHER_DEFAULT_LONGITUDE)
+    #define LONGITUDE HW_DEFAULT_LONGITUDE
 #endif
 
 void app_main(void) {

@@ -14,43 +14,42 @@
 #include "led_control.h"
 #include "weather_fetch.h"
 #include "config_print.h"
+#include "hardware_config.h"
 
-// Include local configuration (WiFi credentials, optional location overrides)
-// This file is gitignored and must be created by copying config.h.example
+// WiFi credentials and location override come from config.h (in weather_common component)
+// This file is gitignored and must be created from config.h.example
 #ifndef __has_include
     #error "Compiler does not support __has_include"
 #endif
 
 #if !__has_include("config.h")
-    #error "config.h not found! Please copy main/config.h.example to main/config.h and configure it."
+    #error "config.h not found! Please copy components/weather_common/include/config.h.example to components/weather_common/include/config.h"
 #endif
 #include "config.h"
 
 static const char *TAG = "WEATHER_CONTROL";
 
-// Location configuration: Use config.h overrides if defined, otherwise use menuconfig defaults
+// Location configuration: Use config.h overrides if defined, otherwise use hardware defaults
 #ifndef LATITUDE
-    #define LATITUDE atof(CONFIG_WEATHER_DEFAULT_LATITUDE)
+    #define LATITUDE HW_DEFAULT_LATITUDE
 #endif
 #ifndef LONGITUDE
-    #define LONGITUDE atof(CONFIG_WEATHER_DEFAULT_LONGITUDE)
+    #define LONGITUDE HW_DEFAULT_LONGITUDE
 #endif
 
-// Hardware pins from menuconfig
-#define GPIO_CONTROL_PIN CONFIG_WEATHER_CONTROL_GPIO_PIN
-#define LED_PIN_1 CONFIG_WEATHER_CONTROL_LED_PIN_1
-#define LED_PIN_2 CONFIG_WEATHER_CONTROL_LED_PIN_2
-#define LED_PIN_3 CONFIG_WEATHER_CONTROL_LED_PIN_3
-#define LED_PIN_4 CONFIG_WEATHER_CONTROL_LED_PIN_4
-#define LED_PIN_5 CONFIG_WEATHER_CONTROL_LED_PIN_5
-#define NUM_LEDS 5
+// Hardware configuration from hardware_config.h (single source of truth)
+#define GPIO_CONTROL_PIN HW_GPIO_CONTROL_PIN
+#define LED_PIN_1 HW_LED_PIN_1
+#define LED_PIN_2 HW_LED_PIN_2
+#define LED_PIN_3 HW_LED_PIN_3
+#define LED_PIN_4 HW_LED_PIN_4
+#define LED_PIN_5 HW_LED_PIN_5
+#define NUM_LEDS HW_NUM_LEDS
 
-// I2C configuration for DS3231 RTC
-#define I2C_MASTER_SCL_IO CONFIG_WEATHER_CONTROL_I2C_SCL
-#define I2C_MASTER_SDA_IO CONFIG_WEATHER_CONTROL_I2C_SDA
+#define I2C_MASTER_SDA_IO HW_I2C_SDA_PIN
+#define I2C_MASTER_SCL_IO HW_I2C_SCL_PIN
 
-// Weather check schedule from menuconfig
-#define WEATHER_CHECK_HOUR CONFIG_WEATHER_CHECK_HOUR
+#define WEATHER_CHECK_HOUR HW_WEATHER_CHECK_HOUR
 
 // RTC memory variables persist during deep sleep
 RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
@@ -59,34 +58,17 @@ RTC_DATA_ATTR float currentCloudCover = 75.0f;  // Default to cloudy (0 LEDs)
 RTC_DATA_ATTR bool ledStates[NUM_LEDS] = {false, false, false, false, false};
 RTC_DATA_ATTR bool lastPinState = false;  // Track previous pin state for edge detection
 
-typedef struct {
-    float min_cloudcover;    // Minimum cloudcover percentage (inclusive)
-    float max_cloudcover;    // Maximum cloudcover percentage (exclusive)
-    int pin_high_until_hour; // Hour when pin goes low (24h format)
-} cloudcover_range_t;
-
-// Configuration: Cloudcover ranges (from menuconfig)
-#define NUM_CLOUDCOVER_RANGES 6
-static const cloudcover_range_t CLOUDCOVER_RANGES[NUM_CLOUDCOVER_RANGES] = {
-    {CONFIG_WEATHER_RANGE_1_MIN, CONFIG_WEATHER_RANGE_1_MAX, CONFIG_WEATHER_RANGE_1_HOUR},
-    {CONFIG_WEATHER_RANGE_2_MIN, CONFIG_WEATHER_RANGE_2_MAX, CONFIG_WEATHER_RANGE_2_HOUR},
-    {CONFIG_WEATHER_RANGE_3_MIN, CONFIG_WEATHER_RANGE_3_MAX, CONFIG_WEATHER_RANGE_3_HOUR},
-    {CONFIG_WEATHER_RANGE_4_MIN, CONFIG_WEATHER_RANGE_4_MAX, CONFIG_WEATHER_RANGE_4_HOUR},
-    {CONFIG_WEATHER_RANGE_5_MIN, CONFIG_WEATHER_RANGE_5_MAX, CONFIG_WEATHER_RANGE_5_HOUR},
-    {CONFIG_WEATHER_RANGE_6_MIN, CONFIG_WEATHER_RANGE_6_MAX, CONFIG_WEATHER_RANGE_6_HOUR}
-};
-
 // Find appropriate pin-off hour based on cloudcover percentage
 static int getPinOffHourFromCloudcover(float cloudcover) {
-    for (int i = 0; i < NUM_CLOUDCOVER_RANGES; i++) {
-        if (cloudcover >= CLOUDCOVER_RANGES[i].min_cloudcover &&
-            cloudcover < CLOUDCOVER_RANGES[i].max_cloudcover) {
+    for (int i = 0; i < HW_NUM_CLOUDCOVER_RANGES; i++) {
+        if (cloudcover >= HW_CLOUDCOVER_RANGES[i].min_cloudcover &&
+            cloudcover < HW_CLOUDCOVER_RANGES[i].max_cloudcover) {
             ESP_LOGI(TAG, "Cloudcover %.1f%% matches range [%.1f, %.1f) -> pin off at %d:00",
                      cloudcover,
-                     CLOUDCOVER_RANGES[i].min_cloudcover,
-                     CLOUDCOVER_RANGES[i].max_cloudcover,
-                     CLOUDCOVER_RANGES[i].pin_high_until_hour);
-            return CLOUDCOVER_RANGES[i].pin_high_until_hour;
+                     HW_CLOUDCOVER_RANGES[i].min_cloudcover,
+                     HW_CLOUDCOVER_RANGES[i].max_cloudcover,
+                     HW_CLOUDCOVER_RANGES[i].pin_high_until_hour);
+            return HW_CLOUDCOVER_RANGES[i].pin_high_until_hour;
         }
     }
     // Default fallback (shouldn't happen with proper ranges)
@@ -157,12 +139,12 @@ void app_main(void) {
 
     // Log cloudcover configuration ranges
     ESP_LOGI(TAG, "Cloudcover ranges configuration:");
-    for (int i = 0; i < NUM_CLOUDCOVER_RANGES; i++) {
+    for (int i = 0; i < HW_NUM_CLOUDCOVER_RANGES; i++) {
         ESP_LOGI(TAG, "  Range %d: [%.1f%%, %.1f%%) -> pin off at %d:00",
                  i + 1,
-                 CLOUDCOVER_RANGES[i].min_cloudcover,
-                 CLOUDCOVER_RANGES[i].max_cloudcover,
-                 CLOUDCOVER_RANGES[i].pin_high_until_hour);
+                 HW_CLOUDCOVER_RANGES[i].min_cloudcover,
+                 HW_CLOUDCOVER_RANGES[i].max_cloudcover,
+                 HW_CLOUDCOVER_RANGES[i].pin_high_until_hour);
     }
 
     // Initialize I2C for RTC

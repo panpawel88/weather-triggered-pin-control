@@ -6,7 +6,6 @@ idf_component_register(
         "config_print.c"
     INCLUDE_DIRS
         "include"
-        "${CMAKE_SOURCE_DIR}/main"  # Include main/ for config.h access
     REQUIRES
         driver
         esp_wifi

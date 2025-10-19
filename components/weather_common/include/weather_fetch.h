@@ -2,6 +2,7 @@
 #define WEATHER_FETCH_H
 
 #include "esp_err.h"
+#include <stdbool.h>
 
 // Weather data structure
 typedef struct {

@@ -3,7 +3,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "led_control.h"
-#include "sdkconfig.h"
+#include "hardware_config.h"
 
 static const char *TAG = "LED_TEST";
 
@@ -16,13 +16,13 @@ void app_main(void) {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "");
 
-    // LED pins from menuconfig
+    // LED pins from hardware_config.h (same as main application)
     const gpio_num_t led_pins[NUM_LEDS] = {
-        CONFIG_WEATHER_CONTROL_LED_PIN_1,
-        CONFIG_WEATHER_CONTROL_LED_PIN_2,
-        CONFIG_WEATHER_CONTROL_LED_PIN_3,
-        CONFIG_WEATHER_CONTROL_LED_PIN_4,
-        CONFIG_WEATHER_CONTROL_LED_PIN_5
+        HW_LED_PIN_1,
+        HW_LED_PIN_2,
+        HW_LED_PIN_3,
+        HW_LED_PIN_4,
+        HW_LED_PIN_5
     };
 
     ESP_LOGI(TAG, "LED pins: %d, %d, %d, %d, %d",

@@ -66,4 +66,4 @@ docs/_build/
 managed_components/
 
 # Local configuration (contains sensitive data)
-main/config.h
+components/weather_common/include/config.h
