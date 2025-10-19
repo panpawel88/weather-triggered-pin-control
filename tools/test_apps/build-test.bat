@@ -1,7 +1,7 @@
 @echo off
 REM Build script for test applications (Windows)
 REM Usage: build-test.bat <test_name> [command]
-REM Where test_name is one of: led_test, weather_test, clock_test, clock_set, config_print
+REM Where test_name is one of: led_test, weather_test, clock_test, clock_set, config_print, rgb_led_test
 
 setlocal enabledelayedexpansion
 
@@ -22,6 +22,7 @@ if "%1"=="" (
     echo   clock_test    - RTC clock read test
     echo   clock_set     - RTC clock set utility
     echo   config_print  - Print all configuration
+    echo   rgb_led_test  - ESP32-S3 RGB LED rainbow test
     echo.
     echo Available commands ^(default: build^):
     echo   build         - Build the test application
@@ -51,10 +52,11 @@ if "%TEST_NAME%"=="weather_test" set VALID=1
 if "%TEST_NAME%"=="clock_test" set VALID=1
 if "%TEST_NAME%"=="clock_set" set VALID=1
 if "%TEST_NAME%"=="config_print" set VALID=1
+if "%TEST_NAME%"=="rgb_led_test" set VALID=1
 
 if %VALID%==0 (
     echo Error: Invalid test name '%TEST_NAME%'
-    echo Valid tests: led_test, weather_test, clock_test, clock_set, config_print
+    echo Valid tests: led_test, weather_test, clock_test, clock_set, config_print, rgb_led_test
     exit /b 1
 )
 

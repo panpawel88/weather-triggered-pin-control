@@ -2,7 +2,7 @@
 
 # Build script for test applications
 # Usage: ./build-test.sh <test_name>
-# Where test_name is one of: led_test, weather_test, clock_test, clock_set, config_print
+# Where test_name is one of: led_test, weather_test, clock_test, clock_set, config_print, rgb_led_test
 
 set -e
 
@@ -23,6 +23,7 @@ if [ $# -eq 0 ]; then
     echo "  clock_test    - RTC clock read test"
     echo "  clock_set     - RTC clock set utility"
     echo "  config_print  - Print all configuration"
+    echo "  rgb_led_test  - ESP32-S3 RGB LED rainbow test"
     echo ""
     echo "Available commands (default: build):"
     echo "  build         - Build the test application"
@@ -42,7 +43,7 @@ TEST_NAME=$1
 COMMAND=${2:-build}
 
 # Validate test name
-VALID_TESTS="led_test weather_test clock_test clock_set config_print"
+VALID_TESTS="led_test weather_test clock_test clock_set config_print rgb_led_test"
 if [[ ! " $VALID_TESTS " =~ " $TEST_NAME " ]]; then
     echo "Error: Invalid test name '$TEST_NAME'"
     echo "Valid tests: $VALID_TESTS"
