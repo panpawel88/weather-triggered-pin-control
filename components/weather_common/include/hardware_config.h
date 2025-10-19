@@ -33,8 +33,8 @@
 #define HW_NUM_LEDS 5
 
 // I2C pins for DS3231 RTC
-#define HW_I2C_SDA_PIN 2
-#define HW_I2C_SCL_PIN 1
+#define HW_I2C_SDA_PIN 1
+#define HW_I2C_SCL_PIN 2
 
 // ============================================================================
 // Weather Behavior Configuration

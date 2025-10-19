@@ -131,6 +131,7 @@ This project includes separate test applications for hardware validation and deb
    - Interactive serial menu to set the DS3231 RTC time
    - Prompts for year, month, day, hour, minute, second
    - Verifies the time was set correctly
+   - **NOTE**: Requires interactive input - see special instructions below
 
 5. **config_print** - Configuration Print Utility
    - Prints all hardware pin assignments
@@ -192,6 +193,31 @@ idf.py build flash monitor
 - Each test app can be configured independently via `idf.py menuconfig` in its directory
 - Test applications are set to target ESP32-S3 by default (can be changed)
 - No deep sleep - test apps run continuously or exit after completion
+
+#### Interactive Input Applications (clock_set)
+
+The **clock_set** application requires interactive keyboard input to set the RTC time. Due to limitations with `idf.py monitor` on some platforms (especially Windows), you may not be able to enter text.
+
+**If you cannot enter text with `idf.py monitor`**, use a dedicated serial terminal instead:
+
+**Windows:**
+- **PuTTY** (recommended): Download from https://www.putty.org/
+  - Connection type: Serial
+  - COM port: (find with Device Manager, usually COM3)
+  - Baud rate: 115200
+- **Tera Term**: Alternative serial terminal
+
+**Linux/Mac:**
+- **screen**: `screen /dev/ttyUSB0 115200` (exit with Ctrl+A then K)
+- **minicom**: `minicom -D /dev/ttyUSB0 -b 115200` (exit with Ctrl+A then X)
+
+**Workflow:**
+1. Flash the application: `./build-test.sh clock_set flash` (or `build-test.bat clock_set flash` on Windows)
+2. Close the monitor if it auto-started
+3. Connect using your preferred serial terminal
+4. Follow the on-screen prompts to set the date and time
+
+See `tools/test_apps/clock_set/README.md` for detailed usage instructions.
 
 ## Troubleshooting
 

@@ -44,6 +44,89 @@ esp_err_t rtc_i2c_init(int sda_pin, int scl_pin) {
     return ESP_OK;
 }
 
+esp_err_t rtc_init_device(void) {
+    esp_err_t ret;
+    uint8_t control_reg, status_reg;
+
+    // Read current control register
+    ret = i2c_master_write_read_device(
+        I2C_MASTER_NUM,
+        DS3231_ADDR,
+        (uint8_t[]){DS3231_REG_CONTROL}, 1,
+        &control_reg, 1,
+        1000 / portTICK_PERIOD_MS
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read control register: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "DS3231 Control register: 0x%02X", control_reg);
+
+    // Read current status register
+    ret = i2c_master_write_read_device(
+        I2C_MASTER_NUM,
+        DS3231_ADDR,
+        (uint8_t[]){DS3231_REG_STATUS}, 1,
+        &status_reg, 1,
+        1000 / portTICK_PERIOD_MS
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read status register: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "DS3231 Status register: 0x%02X", status_reg);
+
+    // Check if oscillator was stopped
+    if (status_reg & DS3231_STATUS_OSF) {
+        ESP_LOGW(TAG, "Oscillator Stop Flag (OSF) is set - RTC may have invalid time");
+    }
+
+    // Ensure oscillator is enabled (EOSC bit = 0)
+    // Set INTCN = 1 to enable interrupt output instead of square wave
+    uint8_t new_control = control_reg & ~DS3231_CONTROL_EOSC;  // Clear EOSC (enable oscillator)
+    new_control |= DS3231_CONTROL_INTCN;  // Set INTCN
+
+    if (new_control != control_reg) {
+        ESP_LOGI(TAG, "Updating control register: 0x%02X -> 0x%02X", control_reg, new_control);
+        ret = i2c_master_write_to_device(
+            I2C_MASTER_NUM,
+            DS3231_ADDR,
+            (uint8_t[]){DS3231_REG_CONTROL, new_control}, 2,
+            1000 / portTICK_PERIOD_MS
+        );
+
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to write control register: %s", esp_err_to_name(ret));
+            return ret;
+        }
+    }
+
+    // Clear OSF flag in status register
+    if (status_reg & DS3231_STATUS_OSF) {
+        uint8_t new_status = status_reg & ~DS3231_STATUS_OSF;  // Clear OSF bit
+        ESP_LOGI(TAG, "Clearing Oscillator Stop Flag: 0x%02X -> 0x%02X", status_reg, new_status);
+
+        ret = i2c_master_write_to_device(
+            I2C_MASTER_NUM,
+            DS3231_ADDR,
+            (uint8_t[]){DS3231_REG_STATUS, new_status}, 2,
+            1000 / portTICK_PERIOD_MS
+        );
+
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to clear OSF flag: %s", esp_err_to_name(ret));
+            return ret;
+        }
+    }
+
+    ESP_LOGI(TAG, "DS3231 device initialized successfully");
+    return ESP_OK;
+}
+
 esp_err_t rtc_read_time(datetime_t *dt) {
     if (!dt) {
         return ESP_ERR_INVALID_ARG;
@@ -100,6 +183,9 @@ esp_err_t rtc_write_time(const datetime_t *dt) {
     data[6] = dec_to_bcd(dt->month);
     data[7] = dec_to_bcd(dt->year - 2000);
 
+    ESP_LOGD(TAG, "Writing time data: %02X %02X %02X %02X %02X %02X %02X %02X",
+             data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+
     esp_err_t ret = i2c_master_write_to_device(
         I2C_MASTER_NUM,
         DS3231_ADDR,
@@ -108,7 +194,8 @@ esp_err_t rtc_write_time(const datetime_t *dt) {
     );
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to write to DS3231: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed to write to DS3231: %s (0x%X)", esp_err_to_name(ret), ret);
+        ESP_LOGE(TAG, "This usually indicates an I2C communication issue or device not responding");
         return ret;
     }
 
