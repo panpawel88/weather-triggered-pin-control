@@ -114,11 +114,10 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
             break;
         case HTTP_EVENT_ON_DATA:
             ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-            if (!esp_http_client_is_chunked_response(evt->client)) {
-                if (evt->user_data) {
-                    memcpy(evt->user_data + output_len, evt->data, evt->data_len);
-                    output_len += evt->data_len;
-                }
+            // Copy data for both chunked and non-chunked responses
+            if (evt->user_data) {
+                memcpy(evt->user_data + output_len, evt->data, evt->data_len);
+                output_len += evt->data_len;
             }
             break;
         case HTTP_EVENT_ON_FINISH:
@@ -145,12 +144,12 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
 
     char url[256];
     snprintf(url, sizeof(url),
-             "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&daily=cloudcover&forecast_days=2",
+             "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&hourly=cloudcover&forecast_days=2&timezone=auto",
              latitude, longitude);
 
     ESP_LOGI(TAG, "Fetching weather from: %s", url);
 
-    char response_buffer[1024] = {0};
+    char response_buffer[2048] = {0};
 
     esp_http_client_config_t config = {
         .url = url,
@@ -171,17 +170,69 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
         if (status_code == 200) {
             cJSON *json = cJSON_Parse(response_buffer);
             if (json) {
-                cJSON *daily = cJSON_GetObjectItem(json, "daily");
-                if (daily) {
-                    cJSON *cloudcover = cJSON_GetObjectItem(daily, "cloudcover");
-                    if (cloudcover && cJSON_IsArray(cloudcover)) {
-                        cJSON *tomorrow = cJSON_GetArrayItem(cloudcover, 1);
-                        if (tomorrow && cJSON_IsNumber(tomorrow)) {
-                            weather_data->tomorrow_cloudcover = (float)cJSON_GetNumberValue(tomorrow);
-                            weather_data->valid = true;
-                            ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%%", weather_data->tomorrow_cloudcover);
+                cJSON *hourly = cJSON_GetObjectItem(json, "hourly");
+                if (hourly) {
+                    cJSON *time_array = cJSON_GetObjectItem(hourly, "time");
+                    cJSON *cloudcover_array = cJSON_GetObjectItem(hourly, "cloudcover");
+
+                    if (time_array && cJSON_IsArray(time_array) &&
+                        cloudcover_array && cJSON_IsArray(cloudcover_array)) {
+
+                        int array_size = cJSON_GetArraySize(time_array);
+
+                        // Find tomorrow's date by checking if we've moved past hour 0 after the first day
+                        char first_date[11] = {0};  // "2025-10-19"
+                        bool found_tomorrow = false;
+                        float cloudcover_sum = 0.0f;
+                        int daytime_count = 0;
+
+                        for (int i = 0; i < array_size; i++) {
+                            cJSON *time_item = cJSON_GetArrayItem(time_array, i);
+                            cJSON *cloudcover_item = cJSON_GetArrayItem(cloudcover_array, i);
+
+                            if (time_item && cJSON_IsString(time_item) &&
+                                cloudcover_item && cJSON_IsNumber(cloudcover_item)) {
+
+                                const char *timestamp = cJSON_GetStringValue(time_item);
+
+                                // Extract date (first 10 chars: "2025-10-19")
+                                if (i == 0) {
+                                    strncpy(first_date, timestamp, 10);
+                                }
+
+                                // Check if this is tomorrow's data
+                                if (strncmp(timestamp, first_date, 10) != 0) {
+                                    found_tomorrow = true;
+
+                                    // Extract hour from timestamp (e.g., "2025-10-20T14:00" -> 14)
+                                    int hour = 0;
+                                    sscanf(timestamp + 11, "%d", &hour);
+
+                                    // Only use daytime hours (6 AM - 6 PM)
+                                    if (hour >= 6 && hour <= 18) {
+                                        cloudcover_sum += (float)cJSON_GetNumberValue(cloudcover_item);
+                                        daytime_count++;
+                                    }
+                                }
+                            }
                         }
+
+                        if (found_tomorrow && daytime_count > 0) {
+                            weather_data->tomorrow_cloudcover = cloudcover_sum / daytime_count;
+                            weather_data->valid = true;
+                            ESP_LOGI(TAG, "Tomorrow daytime cloud cover: %.1f%% (avg of %d hours)",
+                                    weather_data->tomorrow_cloudcover, daytime_count);
+                        } else {
+                            ESP_LOGE(TAG, "Failed to calculate tomorrow's daytime cloud cover");
+                            err = ESP_FAIL;
+                        }
+                    } else {
+                        ESP_LOGE(TAG, "Failed to parse hourly time or cloudcover arrays");
+                        err = ESP_FAIL;
                     }
+                } else {
+                    ESP_LOGE(TAG, "Failed to parse hourly object");
+                    err = ESP_FAIL;
                 }
                 cJSON_Delete(json);
             } else {
