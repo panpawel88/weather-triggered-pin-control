@@ -1,0 +1,7 @@
+# LED Test Application - sdkconfig defaults
+
+# Inherit hardware pin configuration from main project
+# These can be modified via menuconfig if needed
+
+# Default ESP32-S3 target
+CONFIG_IDF_TARGET="esp32s3"

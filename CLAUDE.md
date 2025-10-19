@@ -104,6 +104,93 @@ After a successful build:
 - Build artifacts are generated in the `build/` directory
 - Configuration values are stored in `sdkconfig` (auto-generated)
 
+## Test Applications
+
+This project includes separate test applications for hardware validation and debugging, located in `tools/test_apps/`. These applications are completely separate from the production code and use shared components from `components/weather_common/`.
+
+### Available Test Applications
+
+1. **led_test** - LED Sequential Flash Test
+   - Flashes LEDs one after another in sequence (1→2→3→4→5, repeat)
+   - Useful for verifying LED wiring and active-low logic
+   - Runs continuously until interrupted
+
+2. **weather_test** - Weather Forecast Fetch Test
+   - Connects to WiFi and fetches weather forecast from Open-Meteo API
+   - Displays tomorrow's cloud cover percentage
+   - Shows corresponding LED count and weather condition
+
+3. **clock_test** - RTC Clock Read Test
+   - Reads current time from DS3231 RTC
+   - Displays time every 2 seconds in multiple formats
+   - Useful for verifying I2C communication and RTC operation
+
+4. **clock_set** - RTC Clock Set Utility
+   - Interactive serial menu to set the DS3231 RTC time
+   - Prompts for year, month, day, hour, minute, second
+   - Verifies the time was set correctly
+
+5. **config_print** - Configuration Print Utility
+   - Prints all hardware pin assignments
+   - Shows WiFi SSID (password masked)
+   - Displays location, weather schedule, and cloud cover ranges
+
+### Building and Running Test Applications
+
+#### Using the build script (recommended):
+
+**macOS/Linux:**
+```bash
+cd tools/test_apps
+./build-test.sh <test_name> [command]
+```
+
+**Windows:**
+```cmd
+cd tools\test_apps
+build-test.bat <test_name> [command]
+```
+
+**Available commands:**
+- `build` - Build the test application (default)
+- `flash` - Flash the test application
+- `monitor` - Open serial monitor
+- `flash-monitor` - Flash and monitor in one command
+- `clean` - Clean build artifacts
+
+**Examples:**
+```bash
+# Build LED test
+./build-test.sh led_test build
+
+# Flash and monitor weather test
+./build-test.sh weather_test flash-monitor
+
+# Clean clock set application
+./build-test.sh clock_set clean
+```
+
+#### Manual build process:
+
+```bash
+# Navigate to specific test application
+cd tools/test_apps/led_test
+
+# Set up ESP-IDF environment (if not already done)
+. $HOME/esp/esp-idf/export.sh
+
+# Build, flash, and monitor
+idf.py build flash monitor
+```
+
+### Test Application Notes
+
+- All test apps inherit hardware pin configuration from menuconfig
+- WiFi credentials come from `main/config.h` (for weather_test)
+- Each test app can be configured independently via `idf.py menuconfig` in its directory
+- Test applications are set to target ESP32-S3 by default (can be changed)
+- No deep sleep - test apps run continuously or exit after completion
+
 ## Troubleshooting
 
 - Ensure ESP-IDF is properly installed and sourced

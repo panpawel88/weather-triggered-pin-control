@@ -1,0 +1,7 @@
+# Clock Set Application - sdkconfig defaults
+
+# Inherit I2C pin configuration from main project
+# These can be modified via menuconfig if needed
+
+# Default ESP32-S3 target
+CONFIG_IDF_TARGET="esp32s3"
