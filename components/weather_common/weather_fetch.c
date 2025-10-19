@@ -5,6 +5,7 @@
 #include "esp_netif.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
+#include "esp_crt_bundle.h"
 #include "cJSON.h"
 #include <string.h>
 
@@ -156,6 +157,7 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
         .event_handler = http_event_handler,
         .user_data = response_buffer,
         .timeout_ms = 10000,
+        .crt_bundle_attach = esp_crt_bundle_attach,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);

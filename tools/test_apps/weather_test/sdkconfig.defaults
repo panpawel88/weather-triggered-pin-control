@@ -5,3 +5,9 @@
 
 # Default ESP32-S3 target
 CONFIG_IDF_TARGET="esp32s3"
+
+# Increase stack size for HTTPS/TLS operations with certificate verification
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Disable MPI interrupt mode to avoid interrupt allocation issues
+CONFIG_MBEDTLS_MPI_USE_INTERRUPT=n

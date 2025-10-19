@@ -9,3 +9,9 @@ CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 # Log output
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
+
+# Increase stack size for HTTPS/TLS operations with certificate verification
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Disable MPI interrupt mode to avoid interrupt allocation issues
+CONFIG_MBEDTLS_MPI_USE_INTERRUPT=n
