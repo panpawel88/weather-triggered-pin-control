@@ -33,21 +33,20 @@ void control_leds(const gpio_num_t *led_pins, int num_leds, bool mainPinActive, 
     // Set LED states and configure GPIO pins
     for (int i = 0; i < num_leds; i++) {
         bool ledOn = (i < activeLEDs);
-
-        rtc_gpio_hold_dis(led_pins[i]);  // Disable hold to allow state change
-        rtc_gpio_init(led_pins[i]);
-        rtc_gpio_set_direction(led_pins[i], RTC_GPIO_MODE_OUTPUT_ONLY);
-        rtc_gpio_set_level(led_pins[i], ledOn ? 0 : 1);  // Active-low: 0=ON, 1=OFF
-        rtc_gpio_hold_en(led_pins[i]);  // Maintain state during sleep
+        set_rtc_gpio_output(led_pins[i], ledOn ? 0 : 1);  // Active-low: 0=ON, 1=OFF
     }
 }
 
+void set_rtc_gpio_output(gpio_num_t pin, int level) {
+    rtc_gpio_hold_dis(pin);  // Disable hold to allow state change
+    rtc_gpio_init(pin);
+    rtc_gpio_set_direction(pin, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_set_level(pin, level);
+    rtc_gpio_hold_en(pin);  // Maintain state during sleep
+}
+
 void set_led(gpio_num_t led_pin, bool on) {
-    rtc_gpio_hold_dis(led_pin);  // Disable hold to allow state change
-    rtc_gpio_init(led_pin);
-    rtc_gpio_set_direction(led_pin, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_set_level(led_pin, on ? 0 : 1);  // Active-low: 0=ON, 1=OFF
-    rtc_gpio_hold_en(led_pin);
+    set_rtc_gpio_output(led_pin, on ? 0 : 1);  // Active-low: 0=ON, 1=OFF
 }
 
 void init_leds(const gpio_num_t *led_pins, int num_leds) {

@@ -50,4 +50,20 @@ void set_led(gpio_num_t led_pin, bool on);
  */
 void init_leds(const gpio_num_t *led_pins, int num_leds);
 
+/**
+ * @brief Set RTC GPIO output level with proper hold management
+ *
+ * This helper function handles the complete sequence needed to change
+ * an RTC GPIO output state while preserving it during deep sleep:
+ * - Disables GPIO hold
+ * - Initializes GPIO
+ * - Sets direction to output
+ * - Sets the level
+ * - Re-enables GPIO hold
+ *
+ * @param pin GPIO pin number
+ * @param level Output level (0 or 1)
+ */
+void set_rtc_gpio_output(gpio_num_t pin, int level);
+
 #endif // LED_CONTROL_H

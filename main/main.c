@@ -124,11 +124,7 @@ void controlGPIO(datetime_t *now) {
              hour, pinOffHour, activate ? "yes" : "no", weatherFetched ? "yes" : "no");
 
     // Control main GPIO pin
-    rtc_gpio_hold_dis(GPIO_CONTROL_PIN);  // Disable hold to allow state change
-    rtc_gpio_init(GPIO_CONTROL_PIN);
-    rtc_gpio_set_direction(GPIO_CONTROL_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_set_level(GPIO_CONTROL_PIN, activate ? 1 : 0);
-    rtc_gpio_hold_en(GPIO_CONTROL_PIN);  // Maintain state during sleep
+    set_rtc_gpio_output(GPIO_CONTROL_PIN, activate ? 1 : 0);
 
     // Control LEDs - only show if weather has been fetched AND main pin is active
     bool showLEDs = weatherFetched && activate;
