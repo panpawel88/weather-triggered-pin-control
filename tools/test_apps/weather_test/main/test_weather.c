@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "weather_fetch.h"
 #include "led_control.h"
+#include "timezone_helper.h"
 #include "hardware_config.h"
 
 // Include config.h for location overrides
@@ -24,6 +25,15 @@ void app_main(void) {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "  Weather Forecast Test Application");
     ESP_LOGI(TAG, "========================================");
+    ESP_LOGI(TAG, "");
+
+    // Initialize timezone for DST support
+    ESP_LOGI(TAG, "Initializing timezone: %s", HW_TIMEZONE_POSIX);
+    if (timezone_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Timezone initialization failed!");
+        return;
+    }
+    ESP_LOGI(TAG, "Timezone initialized successfully");
     ESP_LOGI(TAG, "");
 
     ESP_LOGI(TAG, "Location: Latitude=%.6f, Longitude=%.6f", LATITUDE, LONGITUDE);

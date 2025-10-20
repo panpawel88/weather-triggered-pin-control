@@ -7,6 +7,7 @@
 #include "driver/i2c.h"
 #include "driver/uart.h"
 #include "rtc_helper.h"
+#include "timezone_helper.h"
 #include "hardware_config.h"
 
 static const char *TAG = "CLOCK_SET";
@@ -132,6 +133,15 @@ void app_main(void) {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "");
 
+    // Initialize timezone for DST support
+    ESP_LOGI(TAG, "Initializing timezone: %s", HW_TIMEZONE_POSIX);
+    if (timezone_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Timezone initialization failed!");
+        return;
+    }
+    ESP_LOGI(TAG, "Timezone initialized successfully");
+    ESP_LOGI(TAG, "");
+
     // I2C pins from hardware_config.h (same as main application)
     int sda_pin = HW_I2C_SDA_PIN;
     int scl_pin = HW_I2C_SCL_PIN;
@@ -167,13 +177,26 @@ void app_main(void) {
     }
     ESP_LOGI(TAG, "");
 
-    // Read current time
-    datetime_t current;
+    // Read current time (stored as UTC)
+    datetime_t current_utc;
     ESP_LOGI(TAG, "Reading current RTC time...");
-    if (rtc_read_time(&current) == ESP_OK) {
-        ESP_LOGI(TAG, "Current RTC time: %04d-%02d-%02d %02d:%02d:%02d",
-                 current.year, current.month, current.day,
-                 current.hour, current.minute, current.second);
+    if (rtc_read_time(&current_utc) == ESP_OK) {
+        // Convert to local time for display
+        datetime_t current_local;
+        char tz_abbr[8];
+        if (utc_to_local(&current_utc, &current_local) == ESP_OK &&
+            get_timezone_abbr(&current_utc, tz_abbr) == ESP_OK) {
+            ESP_LOGI(TAG, "Current UTC time:   %04d-%02d-%02d %02d:%02d:%02d",
+                     current_utc.year, current_utc.month, current_utc.day,
+                     current_utc.hour, current_utc.minute, current_utc.second);
+            ESP_LOGI(TAG, "Current local time: %04d-%02d-%02d %02d:%02d:%02d %s",
+                     current_local.year, current_local.month, current_local.day,
+                     current_local.hour, current_local.minute, current_local.second, tz_abbr);
+        } else {
+            ESP_LOGI(TAG, "Current RTC time (UTC): %04d-%02d-%02d %02d:%02d:%02d",
+                     current_utc.year, current_utc.month, current_utc.day,
+                     current_utc.hour, current_utc.minute, current_utc.second);
+        }
         ESP_LOGI(TAG, "");
     } else {
         ESP_LOGW(TAG, "Could not read current time from RTC");
@@ -197,28 +220,43 @@ void app_main(void) {
     // Small delay to ensure UART is ready
     vTaskDelay(200 / portTICK_PERIOD_MS);
 
-    // Get new time from user
+    // Get new time from user (in local time)
     printf("\n");
     printf("========================================\n");
-    printf("Enter new date and time\n");
+    printf("Enter new date and time (LOCAL TIME)\n");
+    printf("Timezone: %s\n", HW_TIMEZONE_POSIX);
     printf("========================================\n");
     printf("\n");
 
-    datetime_t new_time;
+    datetime_t new_local_time;
 
-    new_time.year = get_integer_input("Year", 2000, 2099);
-    new_time.month = get_integer_input("Month", 1, 12);
-    new_time.day = get_integer_input("Day", 1, 31);
-    new_time.hour = get_integer_input("Hour (24h format)", 0, 23);
-    new_time.minute = get_integer_input("Minute", 0, 59);
-    new_time.second = get_integer_input("Second", 0, 59);
+    new_local_time.year = get_integer_input("Year", 2000, 2099);
+    new_local_time.month = get_integer_input("Month", 1, 12);
+    new_local_time.day = get_integer_input("Day", 1, 31);
+    new_local_time.hour = get_integer_input("Hour (24h format)", 0, 23);
+    new_local_time.minute = get_integer_input("Minute", 0, 59);
+    new_local_time.second = get_integer_input("Second", 0, 59);
+
+    // Convert local time to UTC for storage
+    datetime_t new_utc_time;
+    if (local_to_utc(&new_local_time, &new_utc_time) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to convert local time to UTC!");
+        return;
+    }
+
+    // Get timezone abbreviation
+    char tz_abbr[8];
+    get_timezone_abbr(&new_utc_time, tz_abbr);
 
     printf("\n");
     ESP_LOGI(TAG, "========================================");
-    ESP_LOGI(TAG, "New time to be set:");
-    ESP_LOGI(TAG, "  %04d-%02d-%02d %02d:%02d:%02d",
-             new_time.year, new_time.month, new_time.day,
-             new_time.hour, new_time.minute, new_time.second);
+    ESP_LOGI(TAG, "Time conversion:");
+    ESP_LOGI(TAG, "  Local time: %04d-%02d-%02d %02d:%02d:%02d %s",
+             new_local_time.year, new_local_time.month, new_local_time.day,
+             new_local_time.hour, new_local_time.minute, new_local_time.second, tz_abbr);
+    ESP_LOGI(TAG, "  UTC time:   %04d-%02d-%02d %02d:%02d:%02d",
+             new_utc_time.year, new_utc_time.month, new_utc_time.day,
+             new_utc_time.hour, new_utc_time.minute, new_utc_time.second);
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "");
 
@@ -232,8 +270,8 @@ void app_main(void) {
         if (strcmp(confirm, "y") == 0 || strcmp(confirm, "Y") == 0 ||
             strcmp(confirm, "yes") == 0 || strcmp(confirm, "YES") == 0) {
 
-            ESP_LOGI(TAG, "Writing time to RTC...");
-            if (rtc_write_time(&new_time) == ESP_OK) {
+            ESP_LOGI(TAG, "Writing UTC time to RTC...");
+            if (rtc_write_time(&new_utc_time) == ESP_OK) {
                 ESP_LOGI(TAG, "Time set successfully!");
                 ESP_LOGI(TAG, "");
 
@@ -241,11 +279,19 @@ void app_main(void) {
                 ESP_LOGI(TAG, "Verifying...");
                 vTaskDelay(100 / portTICK_PERIOD_MS);
 
-                datetime_t verify;
-                if (rtc_read_time(&verify) == ESP_OK) {
-                    ESP_LOGI(TAG, "RTC now reads: %04d-%02d-%02d %02d:%02d:%02d",
-                             verify.year, verify.month, verify.day,
-                             verify.hour, verify.minute, verify.second);
+                datetime_t verify_utc;
+                if (rtc_read_time(&verify_utc) == ESP_OK) {
+                    datetime_t verify_local;
+                    char verify_tz[8];
+                    if (utc_to_local(&verify_utc, &verify_local) == ESP_OK &&
+                        get_timezone_abbr(&verify_utc, verify_tz) == ESP_OK) {
+                        ESP_LOGI(TAG, "RTC now reads (UTC):   %04d-%02d-%02d %02d:%02d:%02d",
+                                 verify_utc.year, verify_utc.month, verify_utc.day,
+                                 verify_utc.hour, verify_utc.minute, verify_utc.second);
+                        ESP_LOGI(TAG, "RTC now reads (Local): %04d-%02d-%02d %02d:%02d:%02d %s",
+                                 verify_local.year, verify_local.month, verify_local.day,
+                                 verify_local.hour, verify_local.minute, verify_local.second, verify_tz);
+                    }
                     ESP_LOGI(TAG, "");
                     ESP_LOGI(TAG, "Clock set operation complete!");
                 }

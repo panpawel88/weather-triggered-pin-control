@@ -11,6 +11,7 @@
 
 // Include shared components
 #include "rtc_helper.h"
+#include "timezone_helper.h"
 #include "led_control.h"
 #include "weather_fetch.h"
 #include "config_print.h"
@@ -105,12 +106,12 @@ void fetchWeatherForecast(void) {
     weather_wifi_shutdown();
 }
 
-void controlGPIO(datetime_t *now) {
+void controlGPIO(const datetime_t *local_time) {
     static const gpio_num_t led_pins[NUM_LEDS] = {
         LED_PIN_1, LED_PIN_2, LED_PIN_3, LED_PIN_4, LED_PIN_5
     };
 
-    int hour = now->hour;
+    int hour = local_time->hour;
     bool activate = (hour >= 9 && hour < pinOffHour);
 
     // Detect pin turning off (transition from ON to OFF)
@@ -134,6 +135,11 @@ void controlGPIO(datetime_t *now) {
 void app_main(void) {
     ESP_LOGI(TAG, "Weather Triggered Pin Control starting");
 
+    // Initialize timezone for DST support
+    if (timezone_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Timezone initialization failed");
+    }
+
     // Log cloudcover configuration ranges
     ESP_LOGI(TAG, "Cloudcover ranges configuration:");
     for (int i = 0; i < HW_NUM_CLOUDCOVER_RANGES; i++) {
@@ -150,27 +156,43 @@ void app_main(void) {
         esp_restart();
     }
 
-    datetime_t now;
-    if (rtc_read_time(&now) != ESP_OK) {
+    // Read UTC time from RTC
+    datetime_t utc_time;
+    if (rtc_read_time(&utc_time) != ESP_OK) {
         ESP_LOGE(TAG, "RTC read failed, restarting");
         esp_restart();
     }
 
-    ESP_LOGI(TAG, "Current time: %04d-%02d-%02d %02d:%02d:%02d",
-             now.year, now.month, now.day, now.hour, now.minute, now.second);
+    // Convert UTC to local time (CET/CEST with automatic DST)
+    datetime_t local_time;
+    if (utc_to_local(&utc_time, &local_time) != ESP_OK) {
+        ESP_LOGE(TAG, "Timezone conversion failed, restarting");
+        esp_restart();
+    }
+
+    // Get timezone info for display
+    char tz_abbr[8];
+    get_timezone_abbr(&utc_time, tz_abbr);
+
+    ESP_LOGI(TAG, "UTC time:   %04d-%02d-%02d %02d:%02d:%02d",
+             utc_time.year, utc_time.month, utc_time.day,
+             utc_time.hour, utc_time.minute, utc_time.second);
+    ESP_LOGI(TAG, "Local time: %04d-%02d-%02d %02d:%02d:%02d %s",
+             local_time.year, local_time.month, local_time.day,
+             local_time.hour, local_time.minute, local_time.second, tz_abbr);
     ESP_LOGI(TAG, "Current pin-off hour setting: %d:00 (weather fetched: %s)",
              pinOffHour, weatherFetched ? "yes" : "no");
     ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
              currentCloudCover, led_count_from_cloudcover(currentCloudCover));
 
-    // Fetch weather at 4 PM
-    if (now.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
+    // Fetch weather at 4 PM local time
+    if (local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
         fetchWeatherForecast();
         weatherFetched = true;
     }
 
-    // Control GPIO based on weather and time
-    controlGPIO(&now);
+    // Control GPIO based on weather and local time
+    controlGPIO(&local_time);
 
     ESP_LOGI(TAG, "Going to deep sleep for 1 hour");
 

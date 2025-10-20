@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "rtc_helper.c"
+        "timezone_helper.c"
         "led_control.c"
         "weather_fetch.c"
         "config_print.c"

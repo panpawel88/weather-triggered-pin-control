@@ -48,6 +48,20 @@
 #define HW_DEFAULT_LONGITUDE 21.01
 
 // ============================================================================
+// Timezone Configuration
+// ============================================================================
+// POSIX TZ string for Central European Time with DST
+// Format: CET-1CEST,M3.5.0,M10.5.0/3
+//   CET-1: Standard time is UTC+1 (negative means east of UTC)
+//   CEST: Daylight saving time name
+//   M3.5.0: DST starts last (5th) Sunday (0) of March (3) at 2:00 AM
+//   M10.5.0/3: DST ends last Sunday of October at 3:00 AM
+#define HW_TIMEZONE_POSIX "CET-1CEST,M3.5.0,M10.5.0/3"
+
+// RTC storage format: UTC (all times stored in RTC are UTC)
+// User-facing times: Local time (CET/CEST) with automatic DST adjustment
+
+// ============================================================================
 // Cloud Cover Ranges Configuration
 // ============================================================================
 // Each range defines: [min%, max%) -> hour when pin turns off

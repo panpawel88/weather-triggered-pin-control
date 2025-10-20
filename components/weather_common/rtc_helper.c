@@ -153,7 +153,7 @@ esp_err_t rtc_read_time(datetime_t *dt) {
     dt->month = bcd_to_dec(data[5] & 0x1F);
     dt->year = bcd_to_dec(data[6]) + 2000;
 
-    ESP_LOGD(TAG, "Read time: %04d-%02d-%02d %02d:%02d:%02d",
+    ESP_LOGD(TAG, "Read time (UTC): %04d-%02d-%02d %02d:%02d:%02d",
              dt->year, dt->month, dt->day, dt->hour, dt->minute, dt->second);
 
     return ESP_OK;
@@ -199,7 +199,7 @@ esp_err_t rtc_write_time(const datetime_t *dt) {
         return ret;
     }
 
-    ESP_LOGI(TAG, "Time set to: %04d-%02d-%02d %02d:%02d:%02d",
+    ESP_LOGI(TAG, "Time set to (UTC): %04d-%02d-%02d %02d:%02d:%02d",
              dt->year, dt->month, dt->day, dt->hour, dt->minute, dt->second);
 
     return ESP_OK;

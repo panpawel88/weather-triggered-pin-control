@@ -53,7 +53,10 @@ esp_err_t rtc_init_device(void);
 /**
  * @brief Read current time from DS3231 RTC
  *
- * @param dt Pointer to datetime_t structure to store the time
+ * NOTE: The RTC stores UTC time. Use timezone_helper functions to convert
+ * to local time with automatic DST adjustment.
+ *
+ * @param dt Pointer to datetime_t structure to store the time (UTC)
  * @return ESP_OK on success, error code otherwise
  */
 esp_err_t rtc_read_time(datetime_t *dt);
@@ -61,7 +64,10 @@ esp_err_t rtc_read_time(datetime_t *dt);
 /**
  * @brief Write time to DS3231 RTC
  *
- * @param dt Pointer to datetime_t structure containing the time to set
+ * NOTE: The RTC stores UTC time. Use timezone_helper functions to convert
+ * from local time before writing.
+ *
+ * @param dt Pointer to datetime_t structure containing the time to set (UTC)
  * @return ESP_OK on success, error code otherwise
  */
 esp_err_t rtc_write_time(const datetime_t *dt);
