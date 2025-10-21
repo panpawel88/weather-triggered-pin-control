@@ -172,7 +172,9 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
             if (json) {
                 // Parse daily sunrise/sunset data first
                 int sunrise_hour = -1;
+                int sunrise_minute = -1;
                 int sunset_hour = -1;
+                int sunset_minute = -1;
                 char tomorrow_date[11] = {0};  // "2025-10-20"
 
                 cJSON *daily = cJSON_GetObjectItem(json, "daily");
@@ -197,27 +199,32 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
                             cJSON *sunrise_item = cJSON_GetArrayItem(sunrise_array, 1);
                             if (sunrise_item && cJSON_IsString(sunrise_item)) {
                                 const char *sunrise_str = cJSON_GetStringValue(sunrise_item);
-                                // Extract hour from ISO 8601: "2025-10-20T06:23"
-                                sscanf(sunrise_str + 11, "%d", &sunrise_hour);
+                                // Extract hour and minute from ISO 8601: "2025-10-20T06:23"
+                                sscanf(sunrise_str + 11, "%d:%d", &sunrise_hour, &sunrise_minute);
                             }
 
                             // Get tomorrow's sunset (index 1)
                             cJSON *sunset_item = cJSON_GetArrayItem(sunset_array, 1);
                             if (sunset_item && cJSON_IsString(sunset_item)) {
                                 const char *sunset_str = cJSON_GetStringValue(sunset_item);
-                                // Extract hour from ISO 8601: "2025-10-20T18:47"
-                                sscanf(sunset_str + 11, "%d", &sunset_hour);
+                                // Extract hour and minute from ISO 8601: "2025-10-20T18:47"
+                                sscanf(sunset_str + 11, "%d:%d", &sunset_hour, &sunset_minute);
                             }
                         }
                     }
                 }
 
                 // Default to 6 AM - 6 PM if sunrise/sunset parsing failed
-                int start_hour = (sunrise_hour >= 0) ? (sunrise_hour + 1) : 6;
+                int start_hour = 6;
+                if (sunrise_hour >= 0 && sunrise_minute >= 0) {
+                    // Round up: if minute >= 30, add 2 hours; otherwise add 1 hour
+                    start_hour = (sunrise_minute >= 30) ? (sunrise_hour + 2) : (sunrise_hour + 1);
+                }
                 int end_hour = (sunset_hour >= 0) ? (sunset_hour - 1) : 18;
 
-                ESP_LOGI(TAG, "Tomorrow's date: %s, sunrise hour: %d, sunset hour: %d",
-                        tomorrow_date[0] ? tomorrow_date : "unknown", sunrise_hour, sunset_hour);
+                ESP_LOGI(TAG, "Tomorrow's date: %s, sunrise: %02d:%02d, sunset: %02d:%02d",
+                        tomorrow_date[0] ? tomorrow_date : "unknown",
+                        sunrise_hour, sunrise_minute, sunset_hour, sunset_minute);
                 ESP_LOGI(TAG, "Using hour range for averaging: %d - %d", start_hour, end_hour);
 
                 // Parse hourly cloudcover data
