@@ -21,9 +21,16 @@ esp_err_t timezone_init(void) {
 static time_t portable_timegm(struct tm *tm) {
     time_t ret;
     char *tz;
+    char tz_copy[64] = {0};  // Buffer to store copy of TZ string
+    bool tz_was_set = false;
 
-    // Save current timezone
+    // Save current timezone (make a copy since getenv() pointer can be invalidated)
     tz = getenv("TZ");
+    if (tz) {
+        strncpy(tz_copy, tz, sizeof(tz_copy) - 1);
+        tz_copy[sizeof(tz_copy) - 1] = '\0';  // Ensure null termination
+        tz_was_set = true;
+    }
 
     // Temporarily set to UTC
     setenv("TZ", "UTC0", 1);
@@ -32,9 +39,9 @@ static time_t portable_timegm(struct tm *tm) {
     // Use mktime (which now treats input as UTC)
     ret = mktime(tm);
 
-    // Restore original timezone
-    if (tz) {
-        setenv("TZ", tz, 1);
+    // Restore original timezone from the copy
+    if (tz_was_set) {
+        setenv("TZ", tz_copy, 1);
     } else {
         unsetenv("TZ");
     }
@@ -143,20 +150,23 @@ esp_err_t get_timezone_offset(const datetime_t *utc_dt, int *offset_seconds) {
         return ESP_FAIL;
     }
 
-    // Get local time
+    // Get both local and UTC representations of the same time_t
     struct tm local_tm;
     localtime_r(&utc_time, &local_tm);
 
-    // Convert both to time_t and calculate difference
-    // Since tm_gmtoff is not available in ESP-IDF, calculate manually
     struct tm utc_tm_check;
     gmtime_r(&utc_time, &utc_tm_check);
 
-    time_t local_as_utc = portable_timegm(&local_tm);
-    time_t utc_as_utc = utc_time;
+    // Calculate offset by comparing the time components
+    // Both tm structs represent the same instant, so the difference is the timezone offset
+    int hour_diff = local_tm.tm_hour - utc_tm_check.tm_hour;
+    int day_diff = local_tm.tm_mday - utc_tm_check.tm_mday;
 
-    // The offset is the difference
-    *offset_seconds = (int)difftime(local_as_utc, utc_as_utc);
+    // Handle date boundary crossing (e.g., 23:00 UTC = 01:00 local next day)
+    if (day_diff > 1) day_diff = -1;   // Month wrapped backwards
+    if (day_diff < -1) day_diff = 1;    // Month wrapped forwards
+
+    *offset_seconds = (day_diff * 24 + hour_diff) * 3600;
 
     return ESP_OK;
 }
