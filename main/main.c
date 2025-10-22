@@ -16,6 +16,7 @@
 #include "weather_fetch.h"
 #include "config_print.h"
 #include "hardware_config.h"
+#include "remote_logging.h"
 
 // WiFi credentials and location override come from config.h (in weather_common component)
 // This file is gitignored and must be created from config.h.example
@@ -92,6 +93,18 @@ void fetchWeatherForecast(void) {
         return;
     }
 
+    // Flush buffered logs to remote server while WiFi is active
+    int buffered = remote_logging_get_buffered_count();
+    int dropped = remote_logging_get_dropped_count();
+    if (buffered > 0 || dropped > 0) {
+        ESP_LOGI(TAG, "Flushing %d buffered logs (dropped: %d) to remote server", buffered, dropped);
+        if (remote_logging_flush() == ESP_OK) {
+            ESP_LOGI(TAG, "Remote log flush successful");
+        } else {
+            ESP_LOGW(TAG, "Remote log flush failed, logs will be retried next time");
+        }
+    }
+
     weather_data_t weather_data;
     if (fetch_weather_forecast(LATITUDE, LONGITUDE, &weather_data) == ESP_OK && weather_data.valid) {
         currentCloudCover = weather_data.tomorrow_cloudcover;
@@ -138,6 +151,11 @@ void app_main(void) {
     // Initialize timezone for DST support
     if (timezone_init() != ESP_OK) {
         ESP_LOGE(TAG, "Timezone initialization failed");
+    }
+
+    // Initialize remote logging (buffers logs for sending to HTTP server)
+    if (remote_logging_init() == ESP_OK) {
+        ESP_LOGI(TAG, "Remote logging initialized");
     }
 
     // Log cloudcover configuration ranges

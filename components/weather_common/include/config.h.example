@@ -55,4 +55,34 @@
 // #define LATITUDE 52.23f
 // #define LONGITUDE 21.01f
 
+// ============================================================================
+// Remote Logging Configuration (OPTIONAL)
+// ============================================================================
+
+/**
+ * Remote logging server URL for HTTP POST endpoint
+ *
+ * If HW_REMOTE_LOGGING_ENABLED is true in hardware_config.h, logs will be
+ * sent to this HTTP server endpoint during WiFi connection.
+ *
+ * The ESP32 will POST JSON data to this URL with format:
+ * {
+ *   "device": "weather-esp32",
+ *   "dropped": 0,
+ *   "logs": [
+ *     {"timestamp": "2025-10-22 14:30:15", "level": "INFO", "tag": "WEATHER", "message": "..."},
+ *     ...
+ *   ]
+ * }
+ *
+ * Examples:
+ * - Local network: "http://192.168.1.100:3000/api/logs"
+ * - With hostname: "http://myserver.local:3000/api/logs"
+ *
+ * IMPORTANT: Must use HTTP (not HTTPS) for simple setup, or configure HTTPS certificates.
+ *
+ * See server_examples/ directory for ready-to-use Node.js and Python server implementations.
+ */
+#define REMOTE_LOG_SERVER_URL "http://192.168.1.100:3000/api/logs"
+
 #endif // CONFIG_H

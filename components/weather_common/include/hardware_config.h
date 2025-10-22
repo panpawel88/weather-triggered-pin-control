@@ -62,6 +62,20 @@
 // User-facing times: Local time (CET/CEST) with automatic DST adjustment
 
 // ============================================================================
+// Remote Logging Configuration
+// ============================================================================
+
+// Enable/disable remote logging to HTTP server
+#define HW_REMOTE_LOGGING_ENABLED true
+
+// Maximum number of log messages to buffer (not bytes)
+// Each message uses ~150 bytes, so 100 messages = ~15KB RAM
+#define HW_LOG_BUFFER_SIZE 100
+
+// Device identifier for remote logging (helps distinguish multiple devices)
+#define HW_LOG_DEVICE_NAME "weather-esp32"
+
+// ============================================================================
 // Cloud Cover Ranges Configuration
 // ============================================================================
 // Each range defines: [min%, max%) -> hour when pin turns off

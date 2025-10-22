@@ -98,6 +98,92 @@ After a successful build:
    idf.py flash monitor
    ```
 
+## Remote Logging
+
+The ESP32 can send logs to a remote HTTP server for centralized monitoring when disconnected from your PC. This is useful for production deployments where the device runs on an AC adapter without a serial connection.
+
+### Features
+
+- **Automatic buffering**: Logs are buffered in memory (up to 100 messages by default)
+- **FIFO overflow**: When buffer is full, oldest messages are dropped
+- **Timestamp tracking**: Each log includes RTC timestamp
+- **WiFi efficient**: Logs are sent during weather fetch (when WiFi is already active)
+- **Graceful degradation**: If server is unreachable, logs are retained and retried
+
+### Configuration
+
+**1. Enable remote logging in `hardware_config.h`:**
+
+```c
+#define HW_REMOTE_LOGGING_ENABLED true    // Enable/disable remote logging
+#define HW_LOG_BUFFER_SIZE 100            // Max number of log messages
+#define HW_LOG_DEVICE_NAME "weather-esp32" // Device identifier
+```
+
+**2. Configure server URL in `config.h`:**
+
+```c
+#define REMOTE_LOG_SERVER_URL "http://192.168.1.100:3000/api/logs"
+```
+
+Replace `192.168.1.100` with your server's IP address.
+
+### Setting Up the Log Server
+
+Two ready-to-use server implementations are provided in `server_examples/`:
+
+#### Option 1: Node.js Server
+
+```bash
+cd server_examples/nodejs
+npm install
+npm start
+```
+
+#### Option 2: Python Server
+
+```bash
+cd server_examples/python
+pip install -r requirements.txt
+python log_server.py
+```
+
+Both servers:
+- Listen on port 3000 by default (configurable)
+- Save logs to `device_logs/` directory
+- Organize logs by device name and date
+- Support verbose mode to print logs to console
+
+See `server_examples/nodejs/README.md` or `server_examples/python/README.md` for detailed setup instructions.
+
+### How It Works
+
+1. ESP32 buffers all log messages during operation
+2. When WiFi connects for weather fetch (4 PM daily), buffered logs are sent to server
+3. Server saves logs with timestamps for later analysis
+4. If server is unreachable, logs stay in buffer and retry on next connection
+5. If buffer fills up, oldest messages are dropped (FIFO)
+
+### Finding Your Server IP Address
+
+**Windows:**
+```cmd
+ipconfig
+```
+Look for "IPv4 Address" (e.g., 192.168.1.100)
+
+**Mac/Linux:**
+```bash
+ifconfig
+# or
+ip addr
+```
+Look for "inet" address on your active network interface.
+
+### Disabling Remote Logging
+
+Set `HW_REMOTE_LOGGING_ENABLED false` in `hardware_config.h` to disable remote logging entirely. Serial logging will continue to work normally.
+
 ## Project Configuration
 
 - WiFi credentials are configured in `main/config.h` (must be created from config.h.example)
