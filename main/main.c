@@ -14,6 +14,7 @@
 #include "timezone_helper.h"
 #include "led_control.h"
 #include "weather_fetch.h"
+#include "wifi_helper.h"
 #include "config_print.h"
 #include "hardware_config.h"
 #include "remote_logging.h"
@@ -81,30 +82,6 @@ static int getPinOffHourFromCloudcover(float cloudcover) {
 void fetchWeatherForecast(void) {
     ESP_LOGI(TAG, "Starting weather fetch");
 
-    if (weather_wifi_init() != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi init failed");
-        return;
-    }
-
-    // Wait for WiFi connection
-    if (weather_wifi_wait_connected(20, 500) != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi connection failed");
-        weather_wifi_shutdown();
-        return;
-    }
-
-    // Flush buffered logs to remote server while WiFi is active
-    int buffered = remote_logging_get_buffered_count();
-    int dropped = remote_logging_get_dropped_count();
-    if (buffered > 0 || dropped > 0) {
-        ESP_LOGI(TAG, "Flushing %d buffered logs (dropped: %d) to remote server", buffered, dropped);
-        if (remote_logging_flush() == ESP_OK) {
-            ESP_LOGI(TAG, "Remote log flush successful");
-        } else {
-            ESP_LOGW(TAG, "Remote log flush failed, logs will be retried next time");
-        }
-    }
-
     weather_data_t weather_data;
     if (fetch_weather_forecast(LATITUDE, LONGITUDE, &weather_data) == ESP_OK && weather_data.valid) {
         currentCloudCover = weather_data.tomorrow_cloudcover;
@@ -115,8 +92,6 @@ void fetchWeatherForecast(void) {
     } else {
         ESP_LOGE(TAG, "Failed to fetch valid weather data");
     }
-
-    weather_wifi_shutdown();
 }
 
 void controlGPIO(const datetime_t *local_time) {
@@ -203,14 +178,40 @@ void app_main(void) {
     ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
              currentCloudCover, led_count_from_cloudcover(currentCloudCover));
 
-    // Fetch weather at 4 PM local time
-    if (local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
-        fetchWeatherForecast();
-        weatherFetched = true;
-    }
-
     // Control GPIO based on weather and local time
     controlGPIO(&local_time);
+
+    // Enable WiFi every hour for remote logging (and weather fetch at 4 PM)
+    ESP_LOGI(TAG, "Initializing WiFi");
+    if (wifi_init() != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi init failed");
+    } else {
+        // Wait for WiFi connection
+        if (wifi_wait_connected(20, 500) != ESP_OK) {
+            ESP_LOGE(TAG, "WiFi connection failed");
+        } else {
+            // Fetch weather at 4 PM local time
+            if (local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
+                fetchWeatherForecast();
+                weatherFetched = true;
+            }
+
+            // Flush buffered logs to remote server while WiFi is active
+            int buffered = remote_logging_get_buffered_count();
+            int dropped = remote_logging_get_dropped_count();
+            if (buffered > 0 || dropped > 0) {
+                ESP_LOGI(TAG, "Flushing %d buffered logs (dropped: %d) to remote server", buffered, dropped);
+                if (remote_logging_flush() == ESP_OK) {
+                    ESP_LOGI(TAG, "Remote log flush successful");
+                } else {
+                    ESP_LOGW(TAG, "Remote log flush failed, logs will be retried next time");
+                }
+            }
+        }
+
+        // Shutdown WiFi to save power
+        wifi_shutdown();
+    }
 
     ESP_LOGI(TAG, "Going to deep sleep for 1 hour");
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "weather_fetch.h"
+#include "wifi_helper.h"
 #include "led_control.h"
 #include "timezone_helper.h"
 #include "hardware_config.h"
@@ -39,18 +40,18 @@ void app_main(void) {
     ESP_LOGI(TAG, "Location: Latitude=%.6f, Longitude=%.6f", LATITUDE, LONGITUDE);
     ESP_LOGI(TAG, "");
 
-    // Initialize WiFi
+    // Initialize WiFi and connect
     ESP_LOGI(TAG, "Initializing WiFi...");
-    if (weather_wifi_init() != ESP_OK) {
+    if (wifi_init() != ESP_OK) {
         ESP_LOGE(TAG, "WiFi initialization failed!");
         return;
     }
 
     // Wait for connection
-    ESP_LOGI(TAG, "Waiting for WiFi connection...");
-    if (weather_wifi_wait_connected(20, 500) != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi connection timeout!");
-        weather_wifi_shutdown();
+    ESP_LOGI(TAG, "Waiting for WiFi connection and IP address...");
+    if (wifi_wait_connected(60, 500) != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi/DHCP timeout!");
+        wifi_shutdown();
         return;
     }
 
@@ -93,6 +94,6 @@ void app_main(void) {
     // Shutdown WiFi
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "Shutting down WiFi...");
-    weather_wifi_shutdown();
+    wifi_shutdown();
     ESP_LOGI(TAG, "Test complete");
 }

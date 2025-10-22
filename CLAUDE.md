@@ -159,10 +159,11 @@ See `server_examples/nodejs/README.md` or `server_examples/python/README.md` for
 ### How It Works
 
 1. ESP32 buffers all log messages during operation
-2. When WiFi connects for weather fetch (4 PM daily), buffered logs are sent to server
-3. Server saves logs with timestamps for later analysis
-4. If server is unreachable, logs stay in buffer and retry on next connection
-5. If buffer fills up, oldest messages are dropped (FIFO)
+2. ESP32 wakes every hour, connects to WiFi, and sends buffered logs to server
+3. At 4 PM, weather forecast is also fetched during the WiFi connection
+4. Server saves logs with timestamps for later analysis
+5. If server is unreachable, logs stay in buffer and retry on next connection
+6. If buffer fills up, oldest messages are dropped (FIFO)
 
 ### Finding Your Server IP Address
 

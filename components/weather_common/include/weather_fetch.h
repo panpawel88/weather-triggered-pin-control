@@ -11,29 +11,10 @@ typedef struct {
 } weather_data_t;
 
 /**
- * @brief Initialize WiFi station mode
- *
- * This function initializes NVS, network interface, and WiFi.
- * It uses WIFI_SSID and WIFI_PASSWORD from config.h.
- *
- * @return ESP_OK on success, error code otherwise
- */
-esp_err_t weather_wifi_init(void);
-
-/**
- * @brief Wait for WiFi connection
- *
- * @param max_retries Maximum number of retry attempts
- * @param retry_delay_ms Delay between retries in milliseconds
- * @return ESP_OK if connected, ESP_ERR_TIMEOUT if not connected after max retries
- */
-esp_err_t weather_wifi_wait_connected(int max_retries, int retry_delay_ms);
-
-/**
  * @brief Fetch weather forecast from Open-Meteo API
  *
- * This function connects to WiFi, fetches the weather forecast,
- * and returns tomorrow's cloud cover percentage.
+ * This function fetches the weather forecast and returns tomorrow's cloud cover percentage.
+ * WiFi must be initialized and connected before calling this function.
  *
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -41,12 +22,5 @@ esp_err_t weather_wifi_wait_connected(int max_retries, int retry_delay_ms);
  * @return ESP_OK on success, error code otherwise
  */
 esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t *weather_data);
-
-/**
- * @brief Shutdown WiFi to save power
- *
- * @return ESP_OK on success, error code otherwise
- */
-esp_err_t weather_wifi_shutdown(void);
 
 #endif // WEATHER_FETCH_H
