@@ -1,6 +1,7 @@
 #include "remote_logging.h"
 #include "hardware_config.h"
 #include "rtc_helper.h"
+#include "timezone_helper.h"
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "freertos/FreeRTOS.h"
@@ -102,16 +103,29 @@ static void parse_log_entry(const char *log_str, char *level, char *tag, char *m
     message[127] = '\0';
 }
 
-// Get current timestamp from RTC
+// Get current timestamp from RTC (in local time)
 static void get_timestamp(char *timestamp_str) {
-    datetime_t rtc_time;
-    if (rtc_read_time(&rtc_time) == ESP_OK) {
-        snprintf(timestamp_str, 20, "%04d-%02d-%02d %02d:%02d:%02d",
-                 rtc_time.year, rtc_time.month, rtc_time.day,
-                 rtc_time.hour, rtc_time.minute, rtc_time.second);
-    } else {
+    datetime_t utc_time, local_time;
+
+    // Read UTC time from RTC
+    if (rtc_read_time(&utc_time) != ESP_OK) {
         strcpy(timestamp_str, "0000-00-00 00:00:00");
+        return;
     }
+
+    // Convert to local time (CET/CEST with automatic DST)
+    if (utc_to_local(&utc_time, &local_time) != ESP_OK) {
+        // Fallback to UTC if conversion fails
+        snprintf(timestamp_str, 20, "%04d-%02d-%02d %02d:%02d:%02d",
+                 utc_time.year, utc_time.month, utc_time.day,
+                 utc_time.hour, utc_time.minute, utc_time.second);
+        return;
+    }
+
+    // Use local time for timestamp
+    snprintf(timestamp_str, 20, "%04d-%02d-%02d %02d:%02d:%02d",
+             local_time.year, local_time.month, local_time.day,
+             local_time.hour, local_time.minute, local_time.second);
 }
 
 // Check if a tag is allowed for remote logging
