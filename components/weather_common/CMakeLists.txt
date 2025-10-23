@@ -3,6 +3,7 @@ idf_component_register(
         "rtc_helper.c"
         "timezone_helper.c"
         "led_control.c"
+        "rgb_led_control.c"
         "weather_fetch.c"
         "config_print.c"
     INCLUDE_DIRS

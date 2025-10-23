@@ -82,6 +82,30 @@
 #define HW_REMOTE_LOG_TAG_COUNT 3
 
 // ============================================================================
+// Built-in RGB LED Configuration
+// ============================================================================
+
+// Enable/disable built-in RGB LED as GPIO control pin indicator
+// When enabled, the RGB LED will mirror the GPIO control pin state:
+// - LED ON (green) when GPIO_CONTROL_PIN is activated (9 AM to pin-off hour)
+// - LED OFF when GPIO_CONTROL_PIN is deactivated
+#define HW_RGB_LED_ENABLED true
+
+// GPIO pin for built-in RGB LED (WS2812/NeoPixel)
+// Common ESP32-S3 pins: 48 (most DevKits), 38, 8
+#define HW_RGB_LED_GPIO 48
+
+// RGB LED color when active (0-255 for each channel)
+// Default: Green (success/on indicator)
+#define HW_RGB_LED_COLOR_R 0
+#define HW_RGB_LED_COLOR_G 255
+#define HW_RGB_LED_COLOR_B 0
+
+// RGB LED brightness (0-100)
+// Default: 30% (medium brightness, clearly visible but not too bright)
+#define HW_RGB_LED_BRIGHTNESS 30
+
+// ============================================================================
 // Cloud Cover Ranges Configuration
 // ============================================================================
 // Each range defines: [min%, max%) -> hour when pin turns off

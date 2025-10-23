@@ -13,6 +13,7 @@
 #include "rtc_helper.h"
 #include "timezone_helper.h"
 #include "led_control.h"
+#include "rgb_led_control.h"
 #include "weather_fetch.h"
 #include "wifi_helper.h"
 #include "config_print.h"
@@ -115,6 +116,9 @@ void controlGPIO(const datetime_t *local_time) {
     // Control main GPIO pin
     set_rtc_gpio_output(GPIO_CONTROL_PIN, activate ? 1 : 0);
 
+    // Control RGB LED to mirror GPIO control pin state
+    rgb_led_set_state(activate);
+
     // Control LEDs - only show if weather has been fetched AND main pin is active
     bool showLEDs = weatherFetched && activate;
     control_leds(led_pins, NUM_LEDS, showLEDs, currentCloudCover);
@@ -137,6 +141,11 @@ void app_main(void) {
     // Initialize remote logging (buffers logs for sending to HTTP server)
     if (remote_logging_init() == ESP_OK) {
         ESP_LOGI(TAG, "Remote logging initialized");
+    }
+
+    // Initialize RGB LED (optional feature, configured in hardware_config.h)
+    if (rgb_led_init() == ESP_OK) {
+        ESP_LOGI(TAG, "RGB LED initialized");
     }
 
     // Log cloudcover configuration ranges
