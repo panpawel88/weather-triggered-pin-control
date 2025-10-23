@@ -114,6 +114,28 @@ static void get_timestamp(char *timestamp_str) {
     }
 }
 
+// Check if a tag is allowed for remote logging
+static bool is_tag_allowed(const char *tag) {
+#ifdef HW_REMOTE_LOG_TAG_COUNT
+    #if HW_REMOTE_LOG_TAG_COUNT == 0
+        // Filter disabled, allow all tags
+        return true;
+    #else
+        // Check whitelist
+        static const char *allowed_tags[] = HW_REMOTE_LOG_TAGS;
+        for (int i = 0; i < HW_REMOTE_LOG_TAG_COUNT; i++) {
+            if (strcmp(tag, allowed_tags[i]) == 0) {
+                return true;
+            }
+        }
+        return false;
+    #endif
+#else
+    // No filter configured, allow all tags
+    return true;
+#endif
+}
+
 // Custom vprintf that buffers logs
 static int remote_vprintf(const char *fmt, va_list args) {
     // Call original vprintf for serial output
@@ -146,6 +168,11 @@ static int remote_vprintf(const char *fmt, va_list args) {
     // Parse log entry
     char level[8], tag[16], message[128];
     parse_log_entry(log_buffer, level, tag, message);
+
+    // Check if tag is allowed for remote logging
+    if (!is_tag_allowed(tag)) {
+        return ret; // Tag not in whitelist, skip buffering
+    }
 
     // Add to circular buffer (thread-safe)
     if (xSemaphoreTake(g_log_buffer.mutex, pdMS_TO_TICKS(10)) == pdTRUE) {

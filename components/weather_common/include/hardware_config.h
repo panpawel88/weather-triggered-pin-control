@@ -75,6 +75,12 @@
 // Device identifier for remote logging (helps distinguish multiple devices)
 #define HW_LOG_DEVICE_NAME "weather-esp32"
 
+// Tag whitelist for remote logging (only these tags sent to server)
+// To send all tags, set HW_REMOTE_LOG_TAG_COUNT to 0
+// Serial logging always shows all tags regardless of this filter
+#define HW_REMOTE_LOG_TAGS {"WEATHER_CONTROL", "WIFI", "RTC"}
+#define HW_REMOTE_LOG_TAG_COUNT 3
+
 // ============================================================================
 // Cloud Cover Ranges Configuration
 // ============================================================================
