@@ -128,6 +128,12 @@ void app_main(void) {
         ESP_LOGE(TAG, "Timezone initialization failed");
     }
 
+    // Initialize I2C for RTC first (needed for timestamps in remote logging)
+    if (rtc_i2c_init(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO) != ESP_OK) {
+        ESP_LOGE(TAG, "I2C initialization failed, restarting");
+        esp_restart();
+    }
+
     // Initialize remote logging (buffers logs for sending to HTTP server)
     if (remote_logging_init() == ESP_OK) {
         ESP_LOGI(TAG, "Remote logging initialized");
@@ -141,12 +147,6 @@ void app_main(void) {
                  HW_CLOUDCOVER_RANGES[i].min_cloudcover,
                  HW_CLOUDCOVER_RANGES[i].max_cloudcover,
                  HW_CLOUDCOVER_RANGES[i].pin_high_until_hour);
-    }
-
-    // Initialize I2C for RTC
-    if (rtc_i2c_init(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO) != ESP_OK) {
-        ESP_LOGE(TAG, "I2C initialization failed, restarting");
-        esp_restart();
     }
 
     // Read UTC time from RTC
