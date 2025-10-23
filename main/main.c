@@ -181,6 +181,9 @@ void app_main(void) {
     // Control GPIO based on weather and local time
     controlGPIO(&local_time);
 
+    // Variable to store sleep duration (calculated before log flush)
+    int sleep_seconds = 3600; // Default 1 hour fallback
+
     // Enable WiFi every hour for remote logging (and weather fetch at 4 PM)
     ESP_LOGI(TAG, "Initializing WiFi");
     if (wifi_init() != ESP_OK) {
@@ -194,6 +197,22 @@ void app_main(void) {
             if (local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
                 fetchWeatherForecast();
                 weatherFetched = true;
+            }
+
+            // Calculate sleep duration just before log flush
+            datetime_t current_utc, current_local;
+            if (rtc_read_time(&current_utc) == ESP_OK && utc_to_local(&current_utc, &current_local) == ESP_OK) {
+                // Calculate sleep duration to wake at next full hour + 30 seconds
+                int seconds_into_hour = current_local.minute * 60 + current_local.second;
+                int seconds_until_next_hour = 3600 - seconds_into_hour;
+                sleep_seconds = seconds_until_next_hour + 30; // Add 30s buffer
+                int next_hour = (current_local.hour + 1) % 24;
+
+                ESP_LOGI(TAG, "Current time: %02d:%02d:%02d, sleeping for %d seconds until %02d:00:30",
+                         current_local.hour, current_local.minute, current_local.second,
+                         sleep_seconds, next_hour);
+            } else {
+                ESP_LOGE(TAG, "Failed to read time for sleep calculation, using default 1 hour");
             }
 
             // Flush buffered logs to remote server while WiFi is active
@@ -213,9 +232,7 @@ void app_main(void) {
         wifi_shutdown();
     }
 
-    ESP_LOGI(TAG, "Going to deep sleep for 1 hour");
-
-    // Deep sleep for 1 hour
-    esp_sleep_enable_timer_wakeup(3600 * 1000000ULL);
+    // Configure sleep timer and enter deep sleep
+    esp_sleep_enable_timer_wakeup(sleep_seconds * 1000000ULL);
     esp_deep_sleep_start();
 }
