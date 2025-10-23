@@ -240,18 +240,25 @@ esp_err_t remote_logging_flush(void) {
     return ESP_OK;
 #endif
 
+    // Temporarily unhook logging to prevent recursive calls to remote_vprintf
+    // while we're inside this function (which could cause deadlock on mutex)
+    vprintf_like_t saved_vprintf = esp_log_set_vprintf(g_original_vprintf);
+
 #ifndef REMOTE_LOG_SERVER_URL
     ESP_LOGW(TAG, "REMOTE_LOG_SERVER_URL not defined in config.h, skipping flush");
+    esp_log_set_vprintf(saved_vprintf);
     return ESP_FAIL;
 #endif
 
     if (xSemaphoreTake(g_log_buffer.mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         ESP_LOGW(TAG, "Failed to acquire mutex for flush");
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_FAIL;
     }
 
     if (g_log_buffer.count == 0 && g_log_buffer.dropped == 0) {
         xSemaphoreGive(g_log_buffer.mutex);
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_OK; // Nothing to send
     }
 
@@ -260,6 +267,7 @@ esp_err_t remote_logging_flush(void) {
     if (!json_payload) {
         ESP_LOGE(TAG, "Failed to allocate JSON buffer");
         xSemaphoreGive(g_log_buffer.mutex);
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_FAIL;
     }
 
@@ -312,6 +320,7 @@ esp_err_t remote_logging_flush(void) {
         ESP_LOGE(TAG, "Failed to initialize HTTP client");
         free(json_payload);
         xSemaphoreGive(g_log_buffer.mutex);
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_FAIL;
     }
 
@@ -333,10 +342,12 @@ esp_err_t remote_logging_flush(void) {
         g_log_buffer.dropped = 0;
 
         xSemaphoreGive(g_log_buffer.mutex);
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_OK;
     } else {
         ESP_LOGW(TAG, "Failed to send logs: HTTP %d, err=%d", status_code, err);
         xSemaphoreGive(g_log_buffer.mutex);
+        esp_log_set_vprintf(saved_vprintf);
         return ESP_FAIL;
     }
 }
