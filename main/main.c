@@ -187,59 +187,60 @@ void app_main(void) {
     ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
              currentCloudCover, led_count_from_cloudcover(currentCloudCover));
 
-    // Control GPIO based on weather and local time
-    controlGPIO(&local_time);
-
-    // Variable to store sleep duration (calculated before log flush)
-    int sleep_seconds = 3600; // Default 1 hour fallback
-
     // Enable WiFi every hour for remote logging (and weather fetch at 4 PM)
     ESP_LOGI(TAG, "Initializing WiFi");
-    if (wifi_init() != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi init failed");
-    } else {
-        // Wait for WiFi connection
-        if (wifi_wait_connected(20, 500) != ESP_OK) {
-            ESP_LOGE(TAG, "WiFi connection failed");
+    bool wifi_connected = false;
+    if (wifi_init() == ESP_OK) {
+        if (wifi_wait_connected(20, 500) == ESP_OK) {
+            wifi_connected = true;
         } else {
-            // Fetch weather at 4 PM local time
-            if (local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
-                fetchWeatherForecast();
-                weatherFetched = true;
-            }
+            ESP_LOGE(TAG, "WiFi connection failed");
+        }
+    } else {
+        ESP_LOGE(TAG, "WiFi init failed");
+    }
 
-            // Calculate sleep duration just before log flush
-            datetime_t current_utc, current_local;
-            if (rtc_read_time(&current_utc) == ESP_OK && utc_to_local(&current_utc, &current_local) == ESP_OK) {
-                // Calculate sleep duration to wake at next full hour + 30 seconds
-                int seconds_into_hour = current_local.minute * 60 + current_local.second;
-                int seconds_until_next_hour = 3600 - seconds_into_hour;
-                sleep_seconds = seconds_until_next_hour + 30; // Add 30s buffer
-                int next_hour = (current_local.hour + 1) % 24;
+    // Fetch weather at 4 PM local time if WiFi is connected
+    if (wifi_connected && local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
+        fetchWeatherForecast();
+        weatherFetched = true;
+    }
 
-                ESP_LOGI(TAG, "Current time: %02d:%02d:%02d, sleeping for %d seconds until %02d:00:30",
-                         current_local.hour, current_local.minute, current_local.second,
-                         sleep_seconds, next_hour);
+    // Control GPIO and LEDs based on weather and local time
+    controlGPIO(&local_time);
+
+    // Calculate sleep duration to wake at next full hour + 30 seconds
+    int sleep_seconds = 3600; // Default 1 hour fallback
+    datetime_t current_utc, current_local;
+    if (rtc_read_time(&current_utc) == ESP_OK && utc_to_local(&current_utc, &current_local) == ESP_OK) {
+        int seconds_into_hour = current_local.minute * 60 + current_local.second;
+        int seconds_until_next_hour = 3600 - seconds_into_hour;
+        sleep_seconds = seconds_until_next_hour + 30; // Add 30s buffer
+        int next_hour = (current_local.hour + 1) % 24;
+
+        ESP_LOGI(TAG, "Current time: %02d:%02d:%02d, sleeping for %d seconds until %02d:00:30",
+                 current_local.hour, current_local.minute, current_local.second,
+                 sleep_seconds, next_hour);
+    } else {
+        ESP_LOGE(TAG, "Failed to read time for sleep calculation, using default 1 hour");
+    }
+
+    // Flush buffered logs to remote server if WiFi is connected
+    if (wifi_connected) {
+        int buffered = remote_logging_get_buffered_count();
+        int dropped = remote_logging_get_dropped_count();
+        if (buffered > 0 || dropped > 0) {
+            ESP_LOGI(TAG, "Flushing %d buffered logs (dropped: %d) to remote server", buffered, dropped);
+            if (remote_logging_flush() == ESP_OK) {
+                ESP_LOGI(TAG, "Remote log flush successful");
             } else {
-                ESP_LOGE(TAG, "Failed to read time for sleep calculation, using default 1 hour");
-            }
-
-            // Flush buffered logs to remote server while WiFi is active
-            int buffered = remote_logging_get_buffered_count();
-            int dropped = remote_logging_get_dropped_count();
-            if (buffered > 0 || dropped > 0) {
-                ESP_LOGI(TAG, "Flushing %d buffered logs (dropped: %d) to remote server", buffered, dropped);
-                if (remote_logging_flush() == ESP_OK) {
-                    ESP_LOGI(TAG, "Remote log flush successful");
-                } else {
-                    ESP_LOGW(TAG, "Remote log flush failed, logs will be retried next time");
-                }
+                ESP_LOGW(TAG, "Remote log flush failed, logs will be retried next time");
             }
         }
-
-        // Shutdown WiFi to save power
-        wifi_shutdown();
     }
+
+    // Shutdown WiFi to save power
+    wifi_shutdown();
 
     // Configure sleep timer and enter deep sleep
     esp_sleep_enable_timer_wakeup(sleep_seconds * 1000000ULL);
