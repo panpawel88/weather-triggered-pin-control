@@ -80,6 +80,71 @@ static int getPinOffHourFromCloudcover(float cloudcover) {
     return 17;
 }
 
+// Wait until the clock reaches HH:00:30 to compensate for deep sleep timer inaccuracy
+static void wait_until_target_second(void) {
+    datetime_t utc_time, local_time;
+
+    // Read current time
+    if (rtc_read_time(&utc_time) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read RTC time for synchronization");
+        return;
+    }
+
+    if (utc_to_local(&utc_time, &local_time) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to convert time for synchronization");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Wake time: %02d:%02d:%02d",
+             local_time.hour, local_time.minute, local_time.second);
+
+    // Only wait if minute is 0 or >= 58 (within ~2 minutes of target hour)
+    if (local_time.minute == 0 || local_time.minute >= 58) {
+        // Calculate seconds until HH:00:30
+        int target_second = 30;
+        int seconds_to_wait = 0;
+
+        if (local_time.minute >= 58) {
+            // We're in the previous hour, need to wait until next hour at :00:30
+            int seconds_in_current_minute = local_time.second;
+            int seconds_to_next_hour = (60 - local_time.minute) * 60 - seconds_in_current_minute;
+            seconds_to_wait = seconds_to_next_hour + target_second;
+        } else if (local_time.minute == 0) {
+            // We're in the target hour
+            if (local_time.second < target_second) {
+                // Wait until :00:30
+                seconds_to_wait = target_second - local_time.second;
+            } else {
+                // Already past :00:30, proceed immediately
+                ESP_LOGI(TAG, "Already past target time (%02d:%02d:%02d), proceeding immediately",
+                         local_time.hour, local_time.minute, local_time.second);
+                return;
+            }
+        }
+
+        if (seconds_to_wait > 0) {
+            ESP_LOGI(TAG, "Waiting %d seconds until %02d:00:30",
+                     seconds_to_wait, (local_time.minute >= 58) ? (local_time.hour + 1) % 24 : local_time.hour);
+
+            // Wait in small increments for better responsiveness
+            while (seconds_to_wait > 0) {
+                int delay_ms = (seconds_to_wait > 1) ? 1000 : (seconds_to_wait * 1000);
+                vTaskDelay(pdMS_TO_TICKS(delay_ms));
+                seconds_to_wait--;
+            }
+
+            // Verify we reached the target time
+            if (rtc_read_time(&utc_time) == ESP_OK && utc_to_local(&utc_time, &local_time) == ESP_OK) {
+                ESP_LOGI(TAG, "Target time reached: %02d:%02d:%02d",
+                         local_time.hour, local_time.minute, local_time.second);
+            }
+        }
+    } else {
+        ESP_LOGI(TAG, "Woke outside synchronization window (minute=%d), proceeding immediately",
+                 local_time.minute);
+    }
+}
+
 void fetchWeatherForecast(void) {
     ESP_LOGI(TAG, "Starting weather fetch");
 
@@ -186,6 +251,9 @@ void app_main(void) {
              pinOffHour, weatherFetched ? "yes" : "no");
     ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
              currentCloudCover, led_count_from_cloudcover(currentCloudCover));
+
+    // Wait until HH:00:30 to compensate for deep sleep timer inaccuracy
+    wait_until_target_second();
 
     // Enable WiFi every hour for remote logging (and weather fetch at 4 PM)
     ESP_LOGI(TAG, "Initializing WiFi");
