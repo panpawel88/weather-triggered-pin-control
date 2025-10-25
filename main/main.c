@@ -61,6 +61,7 @@ RTC_DATA_ATTR bool weather_fetched = false;
 RTC_DATA_ATTR float current_cloud_cover = 75.0f;  // Default to cloudy (0 LEDs)
 RTC_DATA_ATTR bool led_states[NUM_LEDS] = {false, false, false, false, false};
 RTC_DATA_ATTR bool last_pin_state = false;  // Track previous pin state for edge detection
+RTC_DATA_ATTR bool rgb_led_initialized = false;  // Track RGB LED initialization state
 
 // Find appropriate pin-off hour based on cloudcover percentage
 static int get_pin_off_hour_from_cloudcover(float cloudcover) {
@@ -209,8 +210,12 @@ void app_main(void) {
     }
 
     // Initialize RGB LED (optional feature, configured in hardware_config.h)
-    if (rgb_led_init() == ESP_OK) {
-        ESP_LOGI(TAG, "RGB LED initialized");
+    // Only initialize once on first boot, skip on deep sleep wakeups to preserve LED state
+    if (!rgb_led_initialized) {
+        rgb_led_initialized = (rgb_led_init() == ESP_OK);
+        if (rgb_led_initialized) {
+            ESP_LOGI(TAG, "RGB LED initialized");
+        }
     }
 
     // Log cloudcover configuration ranges
