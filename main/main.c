@@ -56,14 +56,14 @@ static const char *TAG = "WEATHER_CONTROL";
 #define WEATHER_CHECK_HOUR HW_WEATHER_CHECK_HOUR
 
 // RTC memory variables persist during deep sleep
-RTC_DATA_ATTR int pinOffHour = 17;  // Default to 5 PM if no weather data
-RTC_DATA_ATTR bool weatherFetched = false;
-RTC_DATA_ATTR float currentCloudCover = 75.0f;  // Default to cloudy (0 LEDs)
-RTC_DATA_ATTR bool ledStates[NUM_LEDS] = {false, false, false, false, false};
-RTC_DATA_ATTR bool lastPinState = false;  // Track previous pin state for edge detection
+RTC_DATA_ATTR int pin_off_hour = 17;  // Default to 5 PM if no weather data
+RTC_DATA_ATTR bool weather_fetched = false;
+RTC_DATA_ATTR float current_cloud_cover = 75.0f;  // Default to cloudy (0 LEDs)
+RTC_DATA_ATTR bool led_states[NUM_LEDS] = {false, false, false, false, false};
+RTC_DATA_ATTR bool last_pin_state = false;  // Track previous pin state for edge detection
 
 // Find appropriate pin-off hour based on cloudcover percentage
-static int getPinOffHourFromCloudcover(float cloudcover) {
+static int get_pin_off_hour_from_cloudcover(float cloudcover) {
     for (int i = 0; i < HW_NUM_CLOUDCOVER_RANGES; i++) {
         if (cloudcover >= HW_CLOUDCOVER_RANGES[i].min_cloudcover &&
             cloudcover < HW_CLOUDCOVER_RANGES[i].max_cloudcover) {
@@ -145,38 +145,38 @@ static void wait_until_target_second(void) {
     }
 }
 
-void fetchWeatherForecast(void) {
+void fetch_weather_forecast_and_update(void) {
     ESP_LOGI(TAG, "Starting weather fetch");
 
     weather_data_t weather_data;
     if (fetch_weather_forecast(LATITUDE, LONGITUDE, &weather_data) == ESP_OK && weather_data.valid) {
-        currentCloudCover = weather_data.tomorrow_cloudcover;
-        pinOffHour = getPinOffHourFromCloudcover(weather_data.tomorrow_cloudcover);
+        current_cloud_cover = weather_data.tomorrow_cloudcover;
+        pin_off_hour = get_pin_off_hour_from_cloudcover(weather_data.tomorrow_cloudcover);
         ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%% -> pin will turn off at %d:00, LEDs: %d",
-                weather_data.tomorrow_cloudcover, pinOffHour,
+                weather_data.tomorrow_cloudcover, pin_off_hour,
                 led_count_from_cloudcover(weather_data.tomorrow_cloudcover));
     } else {
         ESP_LOGE(TAG, "Failed to fetch valid weather data");
     }
 }
 
-void controlGPIO(const datetime_t *local_time) {
+void control_gpio(const datetime_t *local_time) {
     static const gpio_num_t led_pins[NUM_LEDS] = {
         LED_PIN_1, LED_PIN_2, LED_PIN_3, LED_PIN_4, LED_PIN_5
     };
 
     int hour = local_time->hour;
-    bool activate = (hour >= 9 && hour < pinOffHour);
+    bool activate = (hour >= 9 && hour < pin_off_hour);
 
     // Detect pin turning off (transition from ON to OFF)
-    if (lastPinState && !activate) {
-        weatherFetched = false;  // Reset when pin turns off
-        ESP_LOGI(TAG, "Main pin turning off, resetting weatherFetched flag");
+    if (last_pin_state && !activate) {
+        weather_fetched = false;  // Reset when pin turns off
+        ESP_LOGI(TAG, "Main pin turning off, resetting weather_fetched flag");
     }
-    lastPinState = activate;
+    last_pin_state = activate;
 
     ESP_LOGI(TAG, "GPIO control: hour=%d, pin_off_hour=%d, activate=%s, weather_fetched=%s",
-             hour, pinOffHour, activate ? "yes" : "no", weatherFetched ? "yes" : "no");
+             hour, pin_off_hour, activate ? "yes" : "no", weather_fetched ? "yes" : "no");
 
     // Control main GPIO pin
     set_rtc_gpio_output(GPIO_CONTROL_PIN, activate ? 1 : 0);
@@ -185,8 +185,8 @@ void controlGPIO(const datetime_t *local_time) {
     rgb_led_set_state(activate);
 
     // Control LEDs - only show if weather has been fetched AND main pin is active
-    bool showLEDs = weatherFetched && activate;
-    control_leds(led_pins, NUM_LEDS, showLEDs, currentCloudCover);
+    bool show_leds = weather_fetched && activate;
+    control_leds(led_pins, NUM_LEDS, show_leds, current_cloud_cover);
 }
 
 void app_main(void) {
@@ -248,9 +248,9 @@ void app_main(void) {
              local_time.year, local_time.month, local_time.day,
              local_time.hour, local_time.minute, local_time.second, tz_abbr);
     ESP_LOGI(TAG, "Current pin-off hour setting: %d:00 (weather fetched: %s)",
-             pinOffHour, weatherFetched ? "yes" : "no");
+             pin_off_hour, weather_fetched ? "yes" : "no");
     ESP_LOGI(TAG, "Current cloud cover: %.1f%% -> %d LEDs active",
-             currentCloudCover, led_count_from_cloudcover(currentCloudCover));
+             current_cloud_cover, led_count_from_cloudcover(current_cloud_cover));
 
     // Wait until HH:00:30 to compensate for deep sleep timer inaccuracy
     wait_until_target_second();
@@ -269,13 +269,13 @@ void app_main(void) {
     }
 
     // Fetch weather at 4 PM local time if WiFi is connected
-    if (wifi_connected && local_time.hour == WEATHER_CHECK_HOUR && !weatherFetched) {
-        fetchWeatherForecast();
-        weatherFetched = true;
+    if (wifi_connected && local_time.hour == WEATHER_CHECK_HOUR && !weather_fetched) {
+        fetch_weather_forecast_and_update();
+        weather_fetched = true;
     }
 
     // Control GPIO and LEDs based on weather and local time
-    controlGPIO(&local_time);
+    control_gpio(&local_time);
 
     // Calculate sleep duration to wake at next full hour + 30 seconds
     int sleep_seconds = 3600; // Default 1 hour fallback
