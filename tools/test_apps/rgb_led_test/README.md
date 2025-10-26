@@ -1,13 +1,20 @@
-# RGB LED Test Application
+# RGB LED Deep Sleep Test Application
 
-This test application verifies the built-in WS2812/NeoPixel RGB LED on ESP32-S3 development boards by displaying a smooth rainbow color effect.
+This test application verifies that the RGB LED state persists correctly across deep sleep cycles when using the RTC memory optimization (skipping re-initialization on wakeup).
+
+## Purpose
+
+This test validates the fix implemented in the main application where `rgb_led_init()` is only called once on first boot, and skipped on deep sleep wakeups to prevent the LED from flickering.
 
 ## Features
 
-- **Rainbow Effect**: Smooth color cycling through the entire spectrum
-- **Auto-configurable GPIO**: Defaults to the most common pin (GPIO 48)
-- **Clear Diagnostics**: Helpful messages to troubleshoot if the LED doesn't work
-- **HSV Color Space**: Smooth, visually pleasing color transitions
+- **RTC Memory Tracking**: Uses `RTC_DATA_ATTR` to track initialization state across deep sleep
+- **Short Sleep Cycles**: Wakes every 5 seconds for quick testing
+- **3-Step Test Sequence**:
+  1. Turn LED ON (red)
+  2. Turn LED OFF
+  3. Turn LED ON again (tests state preservation)
+- **Automatic Cycling**: Repeats the test sequence continuously
 
 ## Quick Start
 
@@ -34,64 +41,83 @@ idf.py build flash monitor
 
 ## Expected Behavior
 
-When running successfully, you should see:
-1. The RGB LED smoothly cycling through rainbow colors (red → yellow → green → cyan → blue → magenta → red)
-2. Serial output showing hue values and RGB components every 30 degrees
+### Cycle 1 (First Boot)
+- **Step 1**: RGB LED initialization → LED turns ON (red)
+- Deep sleep for 5 seconds
+
+### Cycle 2
+- **Step 2**: Skips initialization → LED turns OFF
+- Deep sleep for 5 seconds
+
+### Cycle 3
+- **Step 3**: Skips initialization → LED turns ON (red)
+- **CRITICAL**: LED should NOT flicker when turning on
+- The LED was OFF before sleep and should remain OFF until `rgb_led_set_state(true)` is called
+- Deep sleep for 5 seconds
+
+### Cycle 4+
+- Repeats the sequence (back to Step 1)
+
+## What to Verify
+
+1. **First boot only**: You should see "First boot - initializing RGB LED" message only once
+2. **Subsequent wakeups**: You should see "Woke from deep sleep - skipping RGB LED initialization"
+3. **No flicker in Cycle 3**: When the LED turns ON in Step 3, it should NOT briefly turn OFF first
+4. **State preservation**: LED state should persist across sleep cycles
 
 ## Troubleshooting
 
-### LED Doesn't Light Up
+### LED Doesn't Work
 
-If the LED doesn't change colors:
+Check your `components/weather_common/include/hardware_config.h`:
 
-1. **Try different GPIO pins**: Edit `main/rgb_led_test.c` and change the `RGB_LED_GPIO` define:
-   ```c
-   #define RGB_LED_GPIO 48  // Try 38 or 8 if this doesn't work
-   ```
+```c
+#define HW_RGB_LED_ENABLED true          // Must be true
+#define HW_RGB_LED_GPIO 48               // Adjust to your board's GPIO
+#define HW_RGB_LED_COLOR_R 255           // Red channel
+#define HW_RGB_LED_COLOR_G 0             // Green channel
+#define HW_RGB_LED_COLOR_B 0             // Blue channel
+#define HW_RGB_LED_BRIGHTNESS 50         // Brightness (0-100)
+```
 
-2. **Common ESP32-S3 RGB LED pins**:
-   - **GPIO 48**: ESP32-S3-DevKitC-1 (most common)
-   - **GPIO 38**: Some ESP32-S3 boards
-   - **GPIO 8**: Other variants
+**Common ESP32-S3 RGB LED pins:**
+- GPIO 48: ESP32-S3-DevKitC-1 (most common)
+- GPIO 38: Some ESP32-S3 variants
+- GPIO 8: Other variants
 
-3. **Check your board documentation**: Look up your specific ESP32-S3 board model to find the RGB LED pin
+### LED Flickers in Cycle 3
 
-4. **Verify your board has an RGB LED**: Look for a small LED on the board, often labeled "RGB" or with "WS2812" printed nearby
+If you see the LED briefly turn OFF before turning ON in Step 3/Cycle 3:
+- This indicates the initialization is being called on wakeup
+- Check that `rgb_led_initialized` RTC variable is being set correctly
+- Verify the logic in the main application matches this test
 
 ### Build Errors
 
-If you get compilation errors:
-
 - Ensure ESP-IDF is properly installed and sourced
+- Check that the `weather_common` component is accessible
 - Try `idf.py clean` then rebuild
-- Check that you're targeting ESP32-S3: `idf.py set-target esp32s3`
+- Verify you're targeting the correct chip (ESP32 or ESP32-S3)
 
 ## Configuration
 
-You can adjust the rainbow effect in `main/rgb_led_test.c`:
+You can adjust the sleep duration in `main/rgb_led_test.c`:
 
 ```c
-#define RAINBOW_HUE_STEP 1      // Color change speed (1-360)
-#define RAINBOW_DELAY_MS 20     // Delay between updates (ms)
-#define BRIGHTNESS 50           // LED brightness (0-100)
+#define SLEEP_DURATION_SEC 5  // Seconds between wake cycles
 ```
 
-- **Faster rainbow**: Increase `RAINBOW_HUE_STEP` or decrease `RAINBOW_DELAY_MS`
-- **Slower rainbow**: Decrease `RAINBOW_HUE_STEP` or increase `RAINBOW_DELAY_MS`
-- **Brighter/dimmer**: Adjust `BRIGHTNESS` (0-100)
+- Increase for slower testing (less frequent wakeups)
+- Decrease for faster testing (more frequent wakeups)
 
 ## Technical Details
 
-- **LED Driver**: ESP-IDF's `led_strip` component with RMT peripheral
-- **Protocol**: WS2812/NeoPixel (GRB color format)
-- **Color Space**: HSV (Hue, Saturation, Value) converted to RGB
-- **RMT Frequency**: 10 MHz
-- **ESP32-S3 Specific**: Uses `mem_block_symbols = 0` for auto-configuration (ESP32-S3 requires 48 symbols, not the default 64)
-
-### Important Note for ESP32-S3
-
-This test app includes a critical fix for ESP32-S3 boards: the `mem_block_symbols` field must be set to 0 (for auto-config) or 48 (ESP32-S3 specific). Without this setting, the LED strip driver will not work on ESP32-S3 boards due to the default value of 64 being incompatible.
+- **LED Driver**: Uses `rgb_led_control.c` from `weather_common` component
+- **Protocol**: WS2812/NeoPixel (GRB color format via RMT)
+- **RTC Memory**: Preserves `rgb_led_initialized` and `test_cycle` across deep sleep
+- **Hardware State**: LED strip hardware maintains its state during deep sleep
+- **Power Consumption**: Deep sleep significantly reduces power between wakeups
 
 ## Exit
 
-Press **Ctrl+C** in the serial monitor to stop the test.
+Press **Ctrl+C** in the serial monitor to stop the test, or press the **RESET** button on your ESP32 board to start a fresh test cycle.
