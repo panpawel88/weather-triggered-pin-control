@@ -210,12 +210,12 @@ void app_main(void) {
     }
 
     // Initialize RGB LED (optional feature, configured in hardware_config.h)
-    // Only initialize once on first boot, skip on deep sleep wakeups to preserve LED state
-    if (!rgb_led_initialized) {
-        rgb_led_initialized = (rgb_led_init() == ESP_OK);
-        if (rgb_led_initialized) {
-            ESP_LOGI(TAG, "RGB LED initialized");
-        }
+    // Always initialize (RMT peripheral needs setup after deep sleep)
+    // Clear LED only on first boot (!rgb_led_initialized = true)
+    // Preserve LED state on wakeups (!rgb_led_initialized = false)
+    rgb_led_initialized = (rgb_led_init(!rgb_led_initialized) == ESP_OK);
+    if (rgb_led_initialized) {
+        ESP_LOGI(TAG, "RGB LED initialized");
     }
 
     // Log cloudcover configuration ranges

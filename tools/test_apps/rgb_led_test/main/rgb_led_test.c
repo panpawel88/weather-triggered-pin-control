@@ -23,21 +23,22 @@ void app_main(void) {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "");
 
-    // Initialize RGB LED only once (on first boot)
+    // Initialize RGB LED (RMT peripheral needs setup after deep sleep)
+    // Clear LED only on first boot (!rgb_led_initialized = true)
+    // Preserve LED state on wakeups (!rgb_led_initialized = false)
     if (!rgb_led_initialized) {
-        ESP_LOGI(TAG, "First boot - initializing RGB LED");
-        rgb_led_initialized = (rgb_led_init() == ESP_OK);
-        if (rgb_led_initialized) {
-            ESP_LOGI(TAG, "RGB LED initialized successfully");
-        } else {
-            ESP_LOGE(TAG, "RGB LED initialization failed!");
-            ESP_LOGI(TAG, "Test cannot continue. Check GPIO configuration in hardware_config.h");
-            return;
-        }
+        ESP_LOGI(TAG, "First boot - initializing RGB LED (will clear)");
     } else {
-        ESP_LOGI(TAG, "Woke from deep sleep - skipping RGB LED initialization");
-        ESP_LOGI(TAG, "RGB LED state should be preserved from before sleep");
+        ESP_LOGI(TAG, "Woke from deep sleep - reinitializing RGB LED (preserving state)");
     }
+
+    rgb_led_initialized = (rgb_led_init(!rgb_led_initialized) == ESP_OK);
+    if (!rgb_led_initialized) {
+        ESP_LOGE(TAG, "RGB LED initialization failed!");
+        ESP_LOGI(TAG, "Test cannot continue. Check GPIO configuration in hardware_config.h");
+        return;
+    }
+    ESP_LOGI(TAG, "RGB LED initialized successfully");
 
     ESP_LOGI(TAG, "");
 

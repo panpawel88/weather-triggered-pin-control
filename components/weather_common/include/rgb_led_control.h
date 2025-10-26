@@ -14,9 +14,10 @@
  * Configures the RMT peripheral and led_strip driver to control
  * the WS2812/NeoPixel RGB LED on the configured GPIO pin.
  *
+ * @param clear_strip true to clear LED on init (first boot), false to preserve state (wakeup)
  * @return ESP_OK on success, ESP_FAIL on error
  */
-esp_err_t rgb_led_init(void);
+esp_err_t rgb_led_init(bool clear_strip);
 
 /**
  * @brief Set RGB LED state (on/off)
@@ -43,7 +44,7 @@ esp_err_t rgb_led_deinit(void);
 #else
 
 // Stub functions when RGB LED is disabled (compile to nothing)
-static inline esp_err_t rgb_led_init(void) { return ESP_OK; }
+static inline esp_err_t rgb_led_init(bool clear_strip) { (void)clear_strip; return ESP_OK; }
 static inline esp_err_t rgb_led_set_state(bool on) { (void)on; return ESP_OK; }
 static inline esp_err_t rgb_led_deinit(void) { return ESP_OK; }
 

@@ -15,10 +15,12 @@ static led_strip_handle_t led_strip = NULL;
 #define LED_STRIP_LED_COUNT 1  // Single RGB LED on dev boards
 #define LED_STRIP_RMT_RES_HZ (10 * 1000 * 1000)  // 10MHz resolution
 
-esp_err_t rgb_led_init(void) {
+esp_err_t rgb_led_init(bool clear_strip) {
     if (led_strip != NULL) {
-        ESP_LOGW(TAG, "RGB LED already initialized");
-        return ESP_OK;
+        ESP_LOGW(TAG, "RGB LED already initialized, reinitializing...");
+        // Clean up existing handle before reinitializing
+        led_strip_del(led_strip);
+        led_strip = NULL;
     }
 
     ESP_LOGI(TAG, "Initializing RGB LED on GPIO %d", HW_RGB_LED_GPIO);
@@ -48,8 +50,13 @@ esp_err_t rgb_led_init(void) {
         return ESP_FAIL;
     }
 
-    // Clear LED initially
-    led_strip_clear(led_strip);
+    // Clear LED only if requested (first boot), otherwise preserve state (wakeup)
+    if (clear_strip) {
+        ESP_LOGI(TAG, "Clearing LED on init");
+        led_strip_clear(led_strip);
+    } else {
+        ESP_LOGI(TAG, "Preserving LED state on init (wakeup)");
+    }
 
     ESP_LOGI(TAG, "RGB LED initialized successfully (color: R=%d G=%d B=%d, brightness: %d%%)",
              HW_RGB_LED_COLOR_R, HW_RGB_LED_COLOR_G, HW_RGB_LED_COLOR_B, HW_RGB_LED_BRIGHTNESS);
