@@ -22,14 +22,15 @@ An ESP32-based IoT device that automatically controls a GPIO pin based on weathe
 
 ## Default Pin Configuration
 
-Default pins (configurable via `idf.py menuconfig`):
+Default pins (configurable in `hardware_config.h`):
 
-- **GPIO 2**: Control pin output
-- **GPIO 4, 5, 16, 17, 18**: LED pins (cloud cover visualization)
-- **GPIO 21**: I2C SDA (DS3231)
-- **GPIO 22**: I2C SCL (DS3231)
+- **GPIO 13**: Control pin output
+- **GPIO 5, 6, 7, 15, 16**: LED pins (cloud cover visualization)
+- **GPIO 1**: I2C SDA (DS3231)
+- **GPIO 2**: I2C SCL (DS3231)
+- **GPIO 48**: RGB LED (optional status indicator)
 
-**Note:** All pins can be customized via menuconfig under "Weather Control Configuration > Hardware Pin Configuration"
+**Note:** All pins can be customized by editing `components/hardware_config/include/hardware_config.h`
 
 ## Software Prerequisites
 
@@ -39,42 +40,42 @@ Default pins (configurable via `idf.py menuconfig`):
 
 ## Configuration
 
-This project uses a hybrid configuration system combining ESP-IDF's menuconfig and a local config file.
+This project uses a simple configuration system based on two header files.
 
-### Step 1: Create Local Configuration File
+### Step 1: Create WiFi Configuration File
 
 Copy the example config file and edit it with your WiFi credentials:
 
 ```bash
 # Create config.h from template
-cp main/config.h.example main/config.h
+cp components/hardware_config/include/config.h.example components/hardware_config/include/config.h
 
 # Edit config.h with your WiFi credentials and optional location
 # (Use your preferred text editor)
 ```
 
-**In `main/config.h`, configure:**
+**In `components/hardware_config/include/config.h`, configure:**
 - `WIFI_SSID` - Your WiFi network name
 - `WIFI_PASSWORD` - Your WiFi password
 - `LATITUDE` / `LONGITUDE` - (Optional) Override default location
+- `REMOTE_LOG_SERVER_URL` - (Optional) Remote logging server URL
 
 **Note:** `config.h` is gitignored and will not be committed to the repository.
 
-### Step 2: Configure Hardware and Settings (Optional)
+### Step 2: Configure Hardware and Behavior (Optional)
 
-Run menuconfig to configure hardware pins and weather settings:
+All hardware pins and behavior settings are configured in:
+- `components/hardware_config/include/hardware_config.h`
 
-```bash
-idf.py menuconfig
-```
+**Available settings:**
+- GPIO pin assignments (control pin, LEDs, I2C)
+- Cloud cover ranges and pin-off hours
+- Weather check schedule (default: 4 PM)
+- Default location (latitude/longitude)
+- Remote logging settings
+- RGB LED configuration
 
-Navigate to: **Weather Control Configuration**
-
-**Available options:**
-- **Hardware Pin Configuration** - GPIO pins for control, LEDs, and I2C
-- **Location Settings** - Default latitude/longitude
-- **Weather Check Schedule** - Hour to check weather forecast
-- **Cloud Cover Ranges Configuration** - Customize cloud cover thresholds and operating hours
+Edit this file directly and rebuild the project to apply changes.
 
 ## Building and Flashing
 
@@ -87,10 +88,9 @@ Navigate to: **Weather Control Configuration**
    %userprofile%\esp\esp-idf\export.bat
    ```
 
-2. **Configure and build:**
+2. **Build the project:**
    ```bash
    idf.py set-target esp32
-   idf.py menuconfig  # Optional: configure project settings
    idf.py build
    ```
 

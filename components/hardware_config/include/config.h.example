@@ -3,9 +3,9 @@
  *
  * SETUP INSTRUCTIONS:
  * 1. Copy this file to config.h in the same directory:
- *    cp components/weather_common/include/config.h.example components/weather_common/include/config.h
+ *    cp components/hardware_config/include/config.h.example components/hardware_config/include/config.h
  *
- * 2. Edit components/weather_common/include/config.h with your WiFi credentials
+ * 2. Edit components/hardware_config/include/config.h with your WiFi credentials
  *
  * 3. The config.h file is gitignored and will not be committed to the repository
  *

@@ -14,7 +14,7 @@
  * IMPORTANT: This is the ONLY place to configure hardware and behavior!
  * Both the main application and all test applications use these same values.
  *
- * WiFi credentials are still in main/config.h (gitignored)
+ * WiFi credentials are in config.h (same directory, gitignored)
  */
 
 // ============================================================================
