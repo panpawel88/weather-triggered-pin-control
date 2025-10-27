@@ -41,41 +41,18 @@ cp components/hardware_config/include/config.h.example components/hardware_confi
 
 ## Build Instructions
 
-### macOS/Linux
-
-1. **Using the build script (recommended)**:
+1. **Set up ESP-IDF environment** (run every new terminal session):
    ```bash
-   ./build-macos.sh
-   ```
-
-2. **Manual build process**:
-   ```bash
-   # Set up environment (run every new terminal session)
+   # macOS/Linux
    . $HOME/esp/esp-idf/export.sh
 
-   # Set target
-   idf.py set-target esp32
-
-   # Build
-   idf.py build
-   ```
-
-### Windows
-
-1. **Using the build script (recommended)**:
-   ```cmd
-   build-windows.bat
-   ```
-
-2. **Manual build process**:
-   ```cmd
-   # Set up environment (run every new terminal session)
+   # Windows
    %userprofile%\esp\esp-idf\export.bat
+   ```
 
-   # Set target
+2. **Set target and build**:
+   ```bash
    idf.py set-target esp32
-
-   # Build
    idf.py build
    ```
 
@@ -227,51 +204,21 @@ This project includes separate test applications for hardware validation and deb
 
 ### Building and Running Test Applications
 
-#### Using the build script (recommended):
-
-**macOS/Linux:**
-```bash
-cd tools/test_apps
-./build-test.sh <test_name> [command]
-```
-
-**Windows:**
-```cmd
-cd tools\test_apps
-build-test.bat <test_name> [command]
-```
-
-**Available commands:**
-- `build` - Build the test application (default)
-- `flash` - Flash the test application
-- `monitor` - Open serial monitor
-- `flash-monitor` - Flash and monitor in one command
-- `clean` - Clean build artifacts
-
-**Examples:**
-```bash
-# Build LED test
-./build-test.sh led_test build
-
-# Flash and monitor weather test
-./build-test.sh weather_test flash-monitor
-
-# Clean clock set application
-./build-test.sh clock_set clean
-```
-
-#### Manual build process:
-
 ```bash
 # Navigate to specific test application
 cd tools/test_apps/led_test
 
 # Set up ESP-IDF environment (if not already done)
+# macOS/Linux
 . $HOME/esp/esp-idf/export.sh
+# Windows
+%userprofile%\esp\esp-idf\export.bat
 
 # Build, flash, and monitor
 idf.py build flash monitor
 ```
+
+**Available test applications:** led_test, weather_test, clock_test, clock_set, config_print
 
 ### Test Application Notes
 
@@ -299,7 +246,7 @@ The **clock_set** application requires interactive keyboard input to set the RTC
 - **minicom**: `minicom -D /dev/ttyUSB0 -b 115200` (exit with Ctrl+A then X)
 
 **Workflow:**
-1. Flash the application: `./build-test.sh clock_set flash` (or `build-test.bat clock_set flash` on Windows)
+1. Flash the application: `cd tools/test_apps/clock_set && idf.py flash`
 2. Close the monitor if it auto-started
 3. Connect using your preferred serial terminal
 4. Follow the on-screen prompts to set the date and time

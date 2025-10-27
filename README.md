@@ -78,20 +78,6 @@ Navigate to: **Weather Control Configuration**
 
 ## Building and Flashing
 
-### Quick Start (Recommended)
-
-**macOS/Linux:**
-```bash
-./build-macos.sh
-```
-
-**Windows:**
-```cmd
-build-windows.bat
-```
-
-### Manual Build Process
-
 1. **Set up ESP-IDF environment:**
    ```bash
    # macOS/Linux
