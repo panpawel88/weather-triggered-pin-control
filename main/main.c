@@ -44,11 +44,6 @@ static const char *TAG = "WEATHER_CONTROL";
 
 // Hardware configuration from hardware_config.h (single source of truth)
 #define GPIO_CONTROL_PIN HW_GPIO_CONTROL_PIN
-#define LED_PIN_1 HW_LED_PIN_1
-#define LED_PIN_2 HW_LED_PIN_2
-#define LED_PIN_3 HW_LED_PIN_3
-#define LED_PIN_4 HW_LED_PIN_4
-#define LED_PIN_5 HW_LED_PIN_5
 #define NUM_LEDS HW_NUM_LEDS
 
 #define I2C_MASTER_SDA_IO HW_I2C_SDA_PIN
@@ -60,7 +55,6 @@ static const char *TAG = "WEATHER_CONTROL";
 RTC_DATA_ATTR int pin_off_hour = 17;  // Default to 5 PM if no weather data
 RTC_DATA_ATTR bool weather_fetched = false;
 RTC_DATA_ATTR float current_cloud_cover = 75.0f;  // Default to cloudy (0 LEDs)
-RTC_DATA_ATTR bool led_states[NUM_LEDS] = {false, false, false, false, false};
 RTC_DATA_ATTR bool last_pin_state = false;  // Track previous pin state for edge detection
 RTC_DATA_ATTR bool rgb_led_initialized = false;  // Track RGB LED initialization state
 
@@ -163,9 +157,7 @@ void fetch_weather_forecast_and_update(void) {
 }
 
 void control_gpio(const datetime_t *local_time) {
-    static const gpio_num_t led_pins[NUM_LEDS] = {
-        LED_PIN_1, LED_PIN_2, LED_PIN_3, LED_PIN_4, LED_PIN_5
-    };
+    static const gpio_num_t led_pins[NUM_LEDS] = HW_LED_PINS;
 
     int hour = local_time->hour;
     bool activate = (hour >= 9 && hour < pin_off_hour);

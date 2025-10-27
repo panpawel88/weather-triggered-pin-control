@@ -14,11 +14,13 @@ static const char *TAG = "CONFIG_PRINT";
 void print_hardware_config(void) {
     ESP_LOGI(TAG, "=== Hardware Pin Configuration ===");
     ESP_LOGI(TAG, "Control GPIO Pin: %d", HW_GPIO_CONTROL_PIN);
-    ESP_LOGI(TAG, "LED Pin 1: %d", HW_LED_PIN_1);
-    ESP_LOGI(TAG, "LED Pin 2: %d", HW_LED_PIN_2);
-    ESP_LOGI(TAG, "LED Pin 3: %d", HW_LED_PIN_3);
-    ESP_LOGI(TAG, "LED Pin 4: %d", HW_LED_PIN_4);
-    ESP_LOGI(TAG, "LED Pin 5: %d", HW_LED_PIN_5);
+
+    // Print LED pins (dynamically based on HW_NUM_LEDS)
+    const int led_pins[] = HW_LED_PINS;
+    for (int i = 0; i < HW_NUM_LEDS; i++) {
+        ESP_LOGI(TAG, "LED Pin %d: %d", i + 1, led_pins[i]);
+    }
+
     ESP_LOGI(TAG, "I2C SDA Pin: %d", HW_I2C_SDA_PIN);
     ESP_LOGI(TAG, "I2C SCL Pin: %d", HW_I2C_SCL_PIN);
 }

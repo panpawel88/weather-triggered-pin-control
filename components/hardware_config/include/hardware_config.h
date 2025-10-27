@@ -25,12 +25,9 @@
 #define HW_GPIO_CONTROL_PIN 13
 
 // LED pins (active-low: 0=ON, 1=OFF)
-#define HW_LED_PIN_1 5
-#define HW_LED_PIN_2 6
-#define HW_LED_PIN_3 7
-#define HW_LED_PIN_4 15
-#define HW_LED_PIN_5 16
+// To change number of LEDs: modify both HW_NUM_LEDS and HW_LED_PINS array
 #define HW_NUM_LEDS 5
+#define HW_LED_PINS {5, 6, 7, 15, 16}
 
 // I2C pins for DS3231 RTC
 #define HW_I2C_SDA_PIN 1

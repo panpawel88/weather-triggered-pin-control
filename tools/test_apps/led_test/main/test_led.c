@@ -7,7 +7,7 @@
 
 static const char *TAG = "LED_TEST";
 
-#define NUM_LEDS 5
+#define NUM_LEDS HW_NUM_LEDS
 
 void app_main(void) {
     ESP_LOGI(TAG, "");
@@ -17,16 +17,12 @@ void app_main(void) {
     ESP_LOGI(TAG, "");
 
     // LED pins from hardware_config.h (same as main application)
-    const gpio_num_t led_pins[NUM_LEDS] = {
-        HW_LED_PIN_1,
-        HW_LED_PIN_2,
-        HW_LED_PIN_3,
-        HW_LED_PIN_4,
-        HW_LED_PIN_5
-    };
+    const gpio_num_t led_pins[NUM_LEDS] = HW_LED_PINS;
 
-    ESP_LOGI(TAG, "LED pins: %d, %d, %d, %d, %d",
-             led_pins[0], led_pins[1], led_pins[2], led_pins[3], led_pins[4]);
+    ESP_LOGI(TAG, "Testing %d LEDs", NUM_LEDS);
+    for (int i = 0; i < NUM_LEDS; i++) {
+        ESP_LOGI(TAG, "  LED %d: GPIO %d", i + 1, led_pins[i]);
+    }
 
     // Initialize all LEDs (turn them off)
     ESP_LOGI(TAG, "Initializing LEDs...");
