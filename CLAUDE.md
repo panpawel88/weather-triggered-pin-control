@@ -15,7 +15,7 @@ This project uses a **simple, single-file configuration system**:
 ### Single Source of Truth: `hardware_config.h`
 
 **All hardware and behavior configuration** is in one file:
-- `components/weather_common/include/hardware_config.h`
+- `components/hardware_config/include/hardware_config.h`
 
 This file contains:
 - ✅ GPIO pin assignments (control pin, LEDs, I2C)
@@ -31,7 +31,7 @@ WiFi credentials are kept separate for security:
 
 ```bash
 # Copy the example config file
-cp components/weather_common/include/config.h.example components/weather_common/include/config.h
+cp components/hardware_config/include/config.h.example components/hardware_config/include/config.h
 
 # Edit config.h with your WiFi credentials and optional location override
 # IMPORTANT: config.h is gitignored and will not be committed
@@ -195,7 +195,7 @@ Set `HW_REMOTE_LOGGING_ENABLED false` in `hardware_config.h` to disable remote l
 
 ## Test Applications
 
-This project includes separate test applications for hardware validation and debugging, located in `tools/test_apps/`. These applications are completely separate from the production code and use shared components from `components/weather_common/`.
+This project includes separate test applications for hardware validation and debugging, located in `tools/test_apps/`. These applications are completely separate from the production code and use shared components organized by functionality (hardware_config, rtc_time, led_gpio, weather_client, rgb_status_led, config_utils).
 
 ### Available Test Applications
 
@@ -275,8 +275,8 @@ idf.py build flash monitor
 
 ### Test Application Notes
 
-- All test apps inherit hardware pin configuration from menuconfig
-- WiFi credentials come from `main/config.h` (for weather_test)
+- All test apps use hardware pin configuration from `hardware_config.h`
+- WiFi credentials come from `config.h` in hardware_config component (for weather_test)
 - Each test app can be configured independently via `idf.py menuconfig` in its directory
 - Test applications are set to target ESP32-S3 by default (can be changed)
 - No deep sleep - test apps run continuously or exit after completion

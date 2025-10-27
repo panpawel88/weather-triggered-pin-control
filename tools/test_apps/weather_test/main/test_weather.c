@@ -2,7 +2,7 @@
 #include "esp_log.h"
 #include "weather_fetch.h"
 #include "wifi_helper.h"
-#include "led_control.h"
+#include "cloudcover_leds.h"
 #include "timezone_helper.h"
 #include "hardware_config.h"
 

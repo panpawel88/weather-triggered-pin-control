@@ -16,7 +16,7 @@
 #endif
 
 #if !__has_include("config.h")
-    #error "config.h not found! Please copy components/weather_common/include/config.h.example to components/weather_common/include/config.h"
+    #error "config.h not found! Please copy components/hardware_config/include/config.h.example to components/hardware_config/include/config.h"
 #endif
 #include "config.h"
 

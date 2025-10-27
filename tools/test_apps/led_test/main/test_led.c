@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "led_control.h"
+#include "led_gpio.h"
 #include "hardware_config.h"
 
 static const char *TAG = "LED_TEST";

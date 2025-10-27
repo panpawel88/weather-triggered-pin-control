@@ -12,7 +12,8 @@
 // Include shared components
 #include "rtc_helper.h"
 #include "timezone_helper.h"
-#include "led_control.h"
+#include "led_gpio.h"
+#include "cloudcover_leds.h"
 #include "rgb_led_control.h"
 #include "weather_fetch.h"
 #include "wifi_helper.h"
@@ -20,14 +21,14 @@
 #include "hardware_config.h"
 #include "remote_logging.h"
 
-// WiFi credentials and location override come from config.h (in weather_common component)
+// WiFi credentials and location override come from config.h (in hardware_config component)
 // This file is gitignored and must be created from config.h.example
 #ifndef __has_include
     #error "Compiler does not support __has_include"
 #endif
 
 #if !__has_include("config.h")
-    #error "config.h not found! Please copy components/weather_common/include/config.h.example to components/weather_common/include/config.h"
+    #error "config.h not found! Please copy components/hardware_config/include/config.h.example to components/hardware_config/include/config.h"
 #endif
 #include "config.h"
 

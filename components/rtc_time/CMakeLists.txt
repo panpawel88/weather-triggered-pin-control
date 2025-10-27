@@ -1,0 +1,10 @@
+idf_component_register(
+    SRCS
+        "rtc_helper.c"
+        "timezone_helper.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        driver
+        hardware_config
+)

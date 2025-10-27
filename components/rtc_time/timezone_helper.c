@@ -4,6 +4,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
+#include <stdbool.h>
 
 static const char *TAG = "TIMEZONE";
 

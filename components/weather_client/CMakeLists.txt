@@ -1,19 +1,15 @@
 idf_component_register(
     SRCS
-        "rtc_helper.c"
-        "timezone_helper.c"
-        "led_control.c"
-        "rgb_led_control.c"
         "weather_fetch.c"
-        "config_print.c"
+        "cloudcover_leds.c"
     INCLUDE_DIRS
         "include"
     REQUIRES
-        driver
         esp_wifi
         esp_event
         esp_http_client
         esp-tls
-        nvs_flash
         json
+        hardware_config
+        led_gpio
 )
