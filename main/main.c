@@ -60,6 +60,12 @@ RTC_DATA_ATTR bool rgb_led_initialized = false;  // Track RGB LED initialization
 
 // Find appropriate pin-off hour based on cloudcover percentage
 static int get_pin_off_hour_from_cloudcover(float cloudcover) {
+    // Edge case: no ranges defined
+    if (HW_NUM_CLOUDCOVER_RANGES == 0) {
+        ESP_LOGW(TAG, "No cloudcover ranges defined, using default 5 PM");
+        return 17;
+    }
+
     for (int i = 0; i < HW_NUM_CLOUDCOVER_RANGES; i++) {
         if (cloudcover >= HW_CLOUDCOVER_RANGES[i].min_cloudcover &&
             cloudcover < HW_CLOUDCOVER_RANGES[i].max_cloudcover) {
@@ -71,7 +77,18 @@ static int get_pin_off_hour_from_cloudcover(float cloudcover) {
             return HW_CLOUDCOVER_RANGES[i].pin_high_until_hour;
         }
     }
-    // Default fallback (shouldn't happen with proper ranges)
+
+    // Edge case: cloudcover at or above last range's max (e.g., 100% or misconfigured ranges)
+    int last_idx = HW_NUM_CLOUDCOVER_RANGES - 1;
+    if (cloudcover >= HW_CLOUDCOVER_RANGES[last_idx].max_cloudcover) {
+        ESP_LOGI(TAG, "Cloudcover %.1f%% >= last range max (%.1f%%) -> using last range -> pin off at %d:00",
+                 cloudcover,
+                 HW_CLOUDCOVER_RANGES[last_idx].max_cloudcover,
+                 HW_CLOUDCOVER_RANGES[last_idx].pin_high_until_hour);
+        return HW_CLOUDCOVER_RANGES[last_idx].pin_high_until_hour;
+    }
+
+    // Fallback for cloudcover below first range's min
     ESP_LOGW(TAG, "No range found for cloudcover %.1f%%, using default 5 PM", cloudcover);
     return 17;
 }

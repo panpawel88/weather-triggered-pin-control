@@ -32,9 +32,14 @@ int led_count_from_cloudcover(float cloudcover) {
         }
     }
 
-    // Edge case: cloudcover exactly at max boundary (e.g., exactly 100%)
-    if (range_index == -1 && cloudcover == 100.0f) {
-        range_index = HW_NUM_CLOUDCOVER_RANGES - 1;
+    // Edge case: cloudcover at or above last range's max (e.g., 100% or misconfigured ranges)
+    if (range_index == -1) {
+        int last_idx = HW_NUM_CLOUDCOVER_RANGES - 1;
+        if (cloudcover >= HW_CLOUDCOVER_RANGES[last_idx].max_cloudcover) {
+            ESP_LOGD(TAG, "Cloudcover %.1f%% >= last range max (%.1f%%), using last range",
+                     cloudcover, HW_CLOUDCOVER_RANGES[last_idx].max_cloudcover);
+            range_index = last_idx;
+        }
     }
 
     if (range_index == -1) {
