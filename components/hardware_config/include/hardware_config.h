@@ -75,8 +75,8 @@
 // Tag whitelist for remote logging (only these tags sent to server)
 // To send all tags, set HW_REMOTE_LOG_TAG_COUNT to 0
 // Serial logging always shows all tags regardless of this filter
-#define HW_REMOTE_LOG_TAGS {"WEATHER_CONTROL", "WIFI", "RTC"}
-#define HW_REMOTE_LOG_TAG_COUNT 3
+#define HW_REMOTE_LOG_TAGS {"WEATHER_CONTROL", "RGB_LED"}
+#define HW_REMOTE_LOG_TAG_COUNT 2
 
 // ============================================================================
 // Built-in RGB LED Configuration
