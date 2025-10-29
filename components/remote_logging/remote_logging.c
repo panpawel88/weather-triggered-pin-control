@@ -44,18 +44,6 @@ typedef struct {
 static log_buffer_t g_log_buffer = {0};
 static vprintf_like_t g_original_vprintf = NULL;
 
-// Convert ESP log level to string
-static const char* log_level_to_string(esp_log_level_t level) {
-    switch (level) {
-        case ESP_LOG_ERROR:   return "ERROR";
-        case ESP_LOG_WARN:    return "WARN";
-        case ESP_LOG_INFO:    return "INFO";
-        case ESP_LOG_DEBUG:   return "DEBUG";
-        case ESP_LOG_VERBOSE: return "VERBOSE";
-        default:              return "NONE";
-    }
-}
-
 // Parse log level from formatted log string
 static void parse_log_entry(const char *log_str, char *level, char *tag, char *message) {
     // ESP-IDF log format: "X (12345) TAG: message"
