@@ -85,4 +85,43 @@
  */
 #define REMOTE_LOG_SERVER_URL "http://192.168.1.100:3000/api/logs"
 
+// ============================================================================
+// Weather Diagnostics Configuration (OPTIONAL)
+// ============================================================================
+
+/**
+ * Weather diagnostics server URL for HTTP POST endpoint
+ *
+ * If HW_WEATHER_DIAGNOSTICS_ENABLED is true in hardware_config.h, weather
+ * diagnostics data will be sent to this HTTP server endpoint at 4 PM each day
+ * during the weather fetch.
+ *
+ * The ESP32 will POST JSON data to this URL with format:
+ * {
+ *   "device": "weather-esp32",
+ *   "timestamp": "2025-11-01 16:00:00",
+ *   "date": "2025-11-02",
+ *   "sunrise": "07:35",
+ *   "sunset": "17:15",
+ *   "avg_cloudcover": 45.3,
+ *   "pin_off_hour": 15,
+ *   "led_count": 3,
+ *   "hourly": [
+ *     {"hour": 8, "cloudcover": 23.0},
+ *     {"hour": 9, "cloudcover": 45.0},
+ *     ...
+ *   ]
+ * }
+ *
+ * Examples:
+ * - Local network: "http://192.168.1.100:3000/api/diagnostics"
+ * - With hostname: "http://myserver.local:3000/api/diagnostics"
+ *
+ * IMPORTANT: Must use HTTP (not HTTPS) for simple setup, or configure HTTPS certificates.
+ *
+ * The log server in tools/log_server/ supports this endpoint and provides
+ * a web interface to view diagnostic data at http://server:3000/diagnostics
+ */
+#define REMOTE_DIAGNOSTICS_URL "http://192.168.1.100:3000/api/diagnostics"
+
 #endif // CONFIG_H

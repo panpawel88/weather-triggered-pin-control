@@ -20,6 +20,7 @@
 #include "config_print.h"
 #include "hardware_config.h"
 #include "remote_logging.h"
+#include "weather_diagnostics.h"
 
 // WiFi credentials and location override come from config.h (in hardware_config component)
 // This file is gitignored and must be created from config.h.example
@@ -165,9 +166,16 @@ void fetch_weather_forecast_and_update(void) {
     if (fetch_weather_forecast(LATITUDE, LONGITUDE, &weather_data) == ESP_OK && weather_data.valid) {
         current_cloud_cover = weather_data.tomorrow_cloudcover;
         pin_off_hour = get_pin_off_hour_from_cloudcover(weather_data.tomorrow_cloudcover);
+        int led_count = led_count_from_cloudcover(weather_data.tomorrow_cloudcover);
         ESP_LOGI(TAG, "Tomorrow cloud cover: %.1f%% -> pin will turn off at %d:00, LEDs: %d",
-                weather_data.tomorrow_cloudcover, pin_off_hour,
-                led_count_from_cloudcover(weather_data.tomorrow_cloudcover));
+                weather_data.tomorrow_cloudcover, pin_off_hour, led_count);
+
+        // Send diagnostic data to server
+        if (send_weather_diagnostics(&weather_data, pin_off_hour, led_count) == ESP_OK) {
+            ESP_LOGI(TAG, "Weather diagnostics sent successfully");
+        } else {
+            ESP_LOGW(TAG, "Failed to send weather diagnostics");
+        }
     } else {
         ESP_LOGE(TAG, "Failed to fetch valid weather data");
     }

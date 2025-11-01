@@ -79,6 +79,19 @@
 #define HW_REMOTE_LOG_TAG_COUNT 2
 
 // ============================================================================
+// Weather Diagnostics Configuration
+// ============================================================================
+
+// Enable/disable weather diagnostics reporting to HTTP server
+// When enabled, the ESP32 will send detailed weather data to the diagnostics
+// endpoint at 4 PM each day (during weather fetch):
+// - Hourly cloudcover values for tomorrow (daytime hours only)
+// - Sunrise and sunset times
+// - Calculated average cloudcover
+// - Resulting pin_off_hour and LED count
+#define HW_WEATHER_DIAGNOSTICS_ENABLED true
+
+// ============================================================================
 // Built-in RGB LED Configuration
 // ============================================================================
 

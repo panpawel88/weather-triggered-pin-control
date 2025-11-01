@@ -68,5 +68,9 @@ managed_components/
 # Local configuration (contains sensitive data)
 components/hardware_config/include/config.h
 
+# Log server data (device-specific)
+tools/log_server/device_logs/
+tools/log_server/diagnostics/
+
 # Claude Code
 .claude/

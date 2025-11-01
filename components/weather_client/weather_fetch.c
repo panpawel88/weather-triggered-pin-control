@@ -1,4 +1,5 @@
 #include "weather_fetch.h"
+#include "hardware_config.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
@@ -51,6 +52,14 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
 
     weather_data->valid = false;
     weather_data->tomorrow_cloudcover = 0.0f;
+    weather_data->num_daytime_hours = 0;
+    weather_data->sunrise_hour = -1;
+    weather_data->sunrise_minute = -1;
+    weather_data->sunset_hour = -1;
+    weather_data->sunset_minute = -1;
+    weather_data->tomorrow_date[0] = '\0';
+    memset(weather_data->daytime_hours, 0, sizeof(weather_data->daytime_hours));
+    memset(weather_data->hourly_cloudcover, 0, sizeof(weather_data->hourly_cloudcover));
 
     char url[256];
     snprintf(url, sizeof(url),
@@ -103,6 +112,8 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
                             cJSON *tomorrow_date_item = cJSON_GetArrayItem(daily_time, 1);
                             if (tomorrow_date_item && cJSON_IsString(tomorrow_date_item)) {
                                 strncpy(tomorrow_date, cJSON_GetStringValue(tomorrow_date_item), 10);
+                                strncpy(weather_data->tomorrow_date, tomorrow_date, 10);
+                                weather_data->tomorrow_date[10] = '\0';
                             }
 
                             // Get tomorrow's sunrise (index 1)
@@ -111,6 +122,8 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
                                 const char *sunrise_str = cJSON_GetStringValue(sunrise_item);
                                 // Extract hour and minute from ISO 8601: "2025-10-20T06:23"
                                 sscanf(sunrise_str + 11, "%d:%d", &sunrise_hour, &sunrise_minute);
+                                weather_data->sunrise_hour = sunrise_hour;
+                                weather_data->sunrise_minute = sunrise_minute;
                             }
 
                             // Get tomorrow's sunset (index 1)
@@ -119,6 +132,8 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
                                 const char *sunset_str = cJSON_GetStringValue(sunset_item);
                                 // Extract hour and minute from ISO 8601: "2025-10-20T18:47"
                                 sscanf(sunset_str + 11, "%d:%d", &sunset_hour, &sunset_minute);
+                                weather_data->sunset_hour = sunset_hour;
+                                weather_data->sunset_minute = sunset_minute;
                             }
                         }
                     }
@@ -178,12 +193,22 @@ esp_err_t fetch_weather_forecast(float latitude, float longitude, weather_data_t
 
                                     // Use dynamic daytime hours based on sunrise/sunset
                                     if (hour >= start_hour && hour <= end_hour) {
-                                        cloudcover_sum += (float)cJSON_GetNumberValue(cloudcover_item);
+                                        float cloudcover_value = (float)cJSON_GetNumberValue(cloudcover_item);
+                                        cloudcover_sum += cloudcover_value;
+
+                                        // Store hourly data if within array bounds
+                                        if (daytime_count < MAX_DAYTIME_HOURS) {
+                                            weather_data->daytime_hours[daytime_count] = hour;
+                                            weather_data->hourly_cloudcover[daytime_count] = cloudcover_value;
+                                        }
                                         daytime_count++;
                                     }
                                 }
                             }
                         }
+
+                        // Store the final count (may be more than MAX_DAYTIME_HOURS but we only store up to the limit)
+                        weather_data->num_daytime_hours = (daytime_count < MAX_DAYTIME_HOURS) ? daytime_count : MAX_DAYTIME_HOURS;
 
                         if (found_tomorrow && daytime_count > 0) {
                             weather_data->tomorrow_cloudcover = cloudcover_sum / daytime_count;
